@@ -1,0 +1,7 @@
+<Project>
+    <PropertyGroup>
+        <PlatformsProjectFolder>src/Core/Platforms</PlatformsProjectFolder>
+        <BaseOutputPath>$(MSBuildProjectDirectory)\out\bin\</BaseOutputPath>
+        <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\out\obj\</BaseIntermediateOutputPath>
+    </PropertyGroup>
+</Project>
