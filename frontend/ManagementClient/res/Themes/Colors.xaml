@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!-- <?xaml-comp compile="true" ?> -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+        <Color x:Key="PrimaryColor">#1976D2</Color>
+
+        <!-- Primary Colors -->
+        <!-- <AppThemeBinding x:Key="PrimaryColor"
+                        Light="#1976D2"
+                        Dark="#2196F3"/>
+        <AppThemeBinding x:Key="PrimaryDarkColor"
+                        Light="#0D47A1"
+                        Dark="#1976D2"/>
+        <AppThemeBinding x:Key="AccentColor"
+                        Light="#2196F3"
+                        Dark="#64B5F6"/> -->
+
+        <!-- Background Colors -->
+        <!-- <AppThemeBinding x:Key="PageBackgroundColor"
+                        Light="#F9F9FA"
+                        Dark="#121212"/>
+        <AppThemeBinding x:Key="SurfaceBackgroundColor"
+                        Light="#FFFFFF"
+                        Dark="#1E1E1E"/>
+        <AppThemeBinding x:Key="CardBackgroundColor"
+                        Light="#FFFFFF"
+                        Dark="#2C2C2E"/>
+        <AppThemeBinding x:Key="OverlayBackgroundColor"
+                        Light="#80000000"
+                        Dark="#80FFFFFF"/> -->
+
+        <!-- Text Colors -->
+        <!-- <AppThemeBinding x:Key="PrimaryTextColor"
+                        Light="#212121"
+                        Dark="#FFFFFF"/>
+        <AppThemeBinding x:Key="SecondaryTextColor"
+                        Light="#757575"
+                        Dark="#AAAAAA"/>
+        <AppThemeBinding x:Key="TertiaryTextColor"
+                        Light="#9E9E9E"
+                        Dark="#666666"/>
+        <AppThemeBinding x:Key="OnPrimaryTextColor"
+                        Light="#FFFFFF"
+                        Dark="#000000"/> -->
+
+        <!-- Border Colors -->
+        <!-- <AppThemeBinding x:Key="BorderColor"
+                        Light="#E0E0E0"
+                        Dark="#3A3A3C"/>
+        <AppThemeBinding x:Key="DividerColor"
+                        Light="#F0F0F0"
+                        Dark="#2C2C2E"/> -->
+
+        <!-- Status Colors -->
+        <!-- <AppThemeBinding x:Key="SuccessColor"
+                        Light="#4CAF50"
+                        Dark="#66BB6A"/>
+        <AppThemeBinding x:Key="WarningColor"
+                        Light="#FF9800"
+                        Dark="#FFB74D"/>
+        <AppThemeBinding x:Key="ErrorColor"
+                        Light="#F44336"
+                        Dark="#EF5350"/>
+        <AppThemeBinding x:Key="InfoColor"
+                        Light="#2196F3"
+                        Dark="#64B5F6"/> -->
+
+        <!-- Delivery Status Colors -->
+        <!-- <AppThemeBinding x:Key="ActiveStatusColor"
+                        Light="#4CAF50"
+                        Dark="#66BB6A"/>
+        <AppThemeBinding x:Key="BusyStatusColor"
+                        Light="#FF9800"
+                        Dark="#FFB74D"/>
+        <AppThemeBinding x:Key="OfflineStatusColor"
+                        Light="#F44336"
+                        Dark="#EF5350"/> -->
+
+        <!-- Button Colors -->
+        <!-- <AppThemeBinding x:Key="ButtonBackgroundColor"
+                        Light="#212121"
+                        Dark="#FFFFFF"/>
+        <AppThemeBinding x:Key="ButtonTextColor"
+                        Light="#FFFFFF"
+                        Dark="#000000"/>
+        <AppThemeBinding x:Key="SecondaryButtonBackgroundColor"
+                        Light="Transparent"
+                        Dark="Transparent"/>
+        <AppThemeBinding x:Key="SecondaryButtonTextColor"
+                        Light="#757575"
+                        Dark="#AAAAAA"/>
+        <AppThemeBinding x:Key="DangerButtonBackgroundColor"
+                        Light="#DC3545"
+                        Dark="#E53E3E"/> -->
+
+        <!-- Input Colors -->
+        <!-- <AppThemeBinding x:Key="InputBackgroundColor"
+                        Light="#F8F9FA"
+                        Dark="#2C2C2E"/>
+        <AppThemeBinding x:Key="InputBorderColor"
+                        Light="#E9ECEF"
+                        Dark="#3A3A3C"/>
+        <AppThemeBinding x:Key="InputFocusedBorderColor"
+                        Light="#2196F3"
+                        Dark="#64B5F6"/>
+        <AppThemeBinding x:Key="PlaceholderTextColor"
+                        Light="#9E9E9E"
+                        Dark="#666666"/> -->
+
+</ResourceDictionary>

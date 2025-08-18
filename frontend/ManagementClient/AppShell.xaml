@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ManagementClient.Program.Bridges.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:ManagementClient.Core.Common.Views.Bridges"
+    Title="ManagementClient">
+
+    <Shell.Resources>
+        <ResourceDictionary>
+            <Style x:Key="BaseStyle"
+                    TargetType="Element">
+                <Setter Property="Shell.BackgroundColor"
+                        Value="{DynamicResource SurfaceBackgroundColor}"/>
+                <Setter Property="Shell.ForegroundColor"
+                        Value="{DynamicResource PrimaryTextColor}"/>
+                <Setter Property="Shell.TitleColor"
+                        Value="{DynamicResource PrimaryTextColor}"/>
+                <Setter Property="Shell.DisabledColor"
+                        Value="{DynamicResource TertiaryTextColor}"/>
+                <Setter Property="Shell.UnselectedColor"
+                        Value="{DynamicResource SecondaryTextColor}"/>
+            </Style>
+        </ResourceDictionary>
+    </Shell.Resources>
+
+    <!-- Login Page (Outside of TabBar) -->
+    <ShellContent x:Name="LoginContent"
+                  Route="login"
+                  ContentTemplate="{DataTemplate local:LoginPage}"
+                  Shell.FlyoutBehavior="Disabled"/>
+
+    <!-- Main Application -->
+    <TabBar x:Name="MainTabBar"
+            Route="main">
+        <Tab Title="Dashboard"
+                Icon="dotnet_bot.png">
+            <ShellContent ContentTemplate="{DataTemplate local:DashboardPage}"/>
+        </Tab>
+    </TabBar>
+
+</Shell>
