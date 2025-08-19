@@ -1,0 +1,124 @@
+import datetime
+from flask import Blueprint, request, jsonify, g
+from app.modules.auth.decorators.auth import token_required
+from app.modules.auth.services.auth_service import register_user, authenticate_user, refresh_user_token
+
+auth_routes = Blueprint("auth_routes", __name__, url_prefix="/auth")
+
+
+@auth_routes.route("/register", methods=["POST"])
+def register():
+    """Публичная регистрация"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON data required'}), 400
+
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    role, error = register_user(username, password)
+
+    if error:
+        status_code = 409 if error.get('code') == 'USERNAME_EXISTS' else 400
+        return jsonify(error), status_code
+
+    return jsonify({
+        'message': f'User {username} registered successfully as {role}',
+        'role': role
+    }), 201
+
+
+@auth_routes.route("/login", methods=["POST"])
+def login():
+    """Аутентификация пользователя"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON data required'}), 400
+
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    access_token, refresh_token, error = authenticate_user(username, password)
+
+    if error:
+        return jsonify(error), 401
+
+    # Получаем данные пользователя для ответа
+    from app.modules.auth.core.db import get_db
+    with get_db() as conn:
+        cur = conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,))
+        user = cur.fetchone()
+
+    return jsonify({
+        'message': 'Login successful',
+        'access_token': access_token,
+        'refresh_token': refresh_token,
+        'user': {
+            'id': user['id'],
+            'username': user['username'],
+            'role': user['role']
+        }
+    }), 200
+
+
+@auth_routes.route("/refresh", methods=["POST"])
+def refresh_token():
+    """Обновление access токена"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON data required'}), 400
+
+    refresh_token = data.get('refresh_token')
+    if not refresh_token:
+        return jsonify({
+            'error': 'Refresh token is required',
+            'code': 'TOKEN_REQUIRED'
+        }), 400
+
+    new_access_token, new_refresh_token, error = refresh_user_token(
+        refresh_token)
+
+    if error:
+        status_code = 404 if error.get('code') == 'USER_NOT_FOUND' else 401
+        return jsonify(error), status_code
+
+    return jsonify({
+        'access_token': new_access_token,
+        'refresh_token': new_refresh_token
+    }), 200
+
+
+@auth_routes.route("/verify", methods=["GET"])
+@token_required
+def verify_token():
+    """Проверка валидности токена"""
+    user = g.current_user
+    return jsonify({
+        'valid': True,
+        'user': {
+            'id': user['id'],
+            'username': user['username'],
+            'role': user['role']
+        }
+    }), 200
+
+
+@auth_routes.route("/logout", methods=["POST"])
+@token_required
+def logout():
+    """Выход из системы"""
+    return jsonify({
+        'message': 'Logged out successfully'
+    }), 200
+
+
+@auth_routes.route("/protected", methods=["GET"])
+@token_required
+def protected():
+    """Защищенный эндпоинт для тестирования"""
+    user = g.current_user
+    return jsonify({
+        'message': f'Hello {user["username"]}! Your role is {user["role"]}.',
+        'timestamp': datetime.datetime.utcnow().isoformat()
+    }), 200
