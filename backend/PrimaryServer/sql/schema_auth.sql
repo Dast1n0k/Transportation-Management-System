@@ -12,5 +12,7 @@ CREATE TRIGGER users_updated_at_trigger
 BEFORE UPDATE ON users
 FOR EACH ROW
 BEGIN
-    SET NEW.updated_at = CURRENT_TIMESTAMP;
+    UPDATE users
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = OLD.id;
 END;

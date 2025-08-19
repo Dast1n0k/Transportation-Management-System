@@ -1,1 +1,8 @@
+# dirs
+
 venv/
+
+# files
+
+.env
+__pycache__

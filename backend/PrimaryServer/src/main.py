@@ -2,11 +2,17 @@
 from flask import Flask
 # from api.sentiment_routes import sentiment_bp
 # from config import Config
+from app.modules.auth.core.repositories import UsersRepository
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(Config)
-    app.register_blueprint(sentiment_bp, url_prefix = "/api/sentiment")
+
+    # app.config.from_object(Config)
+    # app.register_blueprint(sentiment_bp, url_prefix = "/api/sentiment")
+
+    @app.route("/")
+    def home():
+        return "Hello, Flask!"
 
     return app
 
