@@ -1,8 +1,9 @@
 # dirs
 
 venv/
+__pycache__/
 
 # files
 
+.db
 .env
-__pycache__

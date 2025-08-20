@@ -2,7 +2,6 @@ from dependency_injector import containers, providers
 from app.shared.database.orm import OrmEngineConfigBuilder, OrmSessionConfigBuilder
 from app.shared.database.orm import SQLalchemyAsyncDatabaseHandler
 
-
 class AuthContainer(containers.DeclarativeContainer):
     AuthDatabase = providers.Singleton(
         SQLalchemyAsyncDatabaseHandler,
