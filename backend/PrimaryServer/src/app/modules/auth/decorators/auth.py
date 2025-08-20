@@ -20,7 +20,6 @@ def token_required(f):
 
 
 def admin_required(f):
-    """Декоратор для проверки прав администратора"""
     @functools.wraps(f)
     def decorated(*args, **kwargs):
         if not hasattr(g, 'current_user') or g.current_user.get('role') != 'admin':
@@ -33,7 +32,6 @@ def admin_required(f):
 
 
 def manager_or_admin_required(f):
-    """Декоратор для проверки прав менеджера или админа"""
     @functools.wraps(f)
     def decorated(*args, **kwargs):
         if not hasattr(g, 'current_user') or g.current_user.get('role') not in ['admin', 'manager']:

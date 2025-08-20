@@ -9,7 +9,6 @@ profile_routes = Blueprint("profile_routes", __name__)
 @profile_routes.route("/profile", methods=["GET"])
 @token_required
 def get_profile():
-    """Получение профиля текущего пользователя"""
     user = g.current_user
     return jsonify({
         'user': {
@@ -23,7 +22,6 @@ def get_profile():
 @profile_routes.route("/profile", methods=["PUT"])
 @token_required
 def update_profile():
-    """Обновление профиля пользователя"""
     current_user = g.current_user
     data = request.get_json()
 
@@ -52,7 +50,6 @@ def update_profile():
 @token_required
 @admin_required
 def admin_only():
-    """Эндпоинт только для админов"""
     user = g.current_user
     return jsonify({
         'message': f'Admin access granted for {user["username"]}',
@@ -64,7 +61,6 @@ def admin_only():
 @token_required
 @manager_or_admin_required
 def manager_or_admin():
-    """Эндпоинт для менеджеров и админов"""
     user = g.current_user
     return jsonify({
         'message': f'Manager/Admin access granted for {user["username"]}',

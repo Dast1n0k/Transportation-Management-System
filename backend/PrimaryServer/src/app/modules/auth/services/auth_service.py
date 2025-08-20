@@ -8,7 +8,6 @@ from app.modules.auth.utils.validators import validate_user_data, validate_passw
 
 
 def is_first_user():
-    """Проверяет, является ли это первым пользователем в системе"""
     with get_db() as conn:
         cur = conn.execute("SELECT COUNT(*) as count FROM users")
         count = cur.fetchone()["count"]
@@ -16,8 +15,6 @@ def is_first_user():
 
 
 def register_user(username, password):
-    """Регистрирует нового пользователя"""
-    # Валидация
     validation_error = validate_user_data(username, password)
     if validation_error:
         return None, validation_error
@@ -25,7 +22,6 @@ def register_user(username, password):
     hashed_password = generate_password_hash(password)
 
     with get_db() as conn:
-        # Определяем роль: первый пользователь - админ, остальные - менеджеры
         role = "admin" if is_first_user() else "manager"
 
         try:
@@ -43,7 +39,6 @@ def register_user(username, password):
 
 
 def authenticate_user(username, password):
-    """Аутентифицирует пользователя и возвращает токены"""
     validation_error = validate_user_data(username, password)
     if validation_error:
         return None, None, validation_error
@@ -66,7 +61,6 @@ def authenticate_user(username, password):
 
 
 def refresh_user_token(refresh_token):
-    """Обновляет access токен с помощью refresh токена"""
     try:
         payload = jwt.decode(
             refresh_token, current_app.config['SECRET_KEY'], algorithms=['HS256'])

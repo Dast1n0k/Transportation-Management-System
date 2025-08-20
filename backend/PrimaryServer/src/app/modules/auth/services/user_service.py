@@ -84,7 +84,6 @@ def delete_user_by_id(user_id, current_user):
 
 def change_user_role_by_id(user_id, new_role, current_user):
     """Изменяет роль пользователя"""
-    # Валидация роли
     role_error = validate_role(new_role)
     if role_error:
         return None, role_error
@@ -97,7 +96,6 @@ def change_user_role_by_id(user_id, new_role, current_user):
         }
 
     with get_db() as conn:
-        # Проверяем существование пользователя
         cur = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,))
         user_to_update = cur.fetchone()
 
@@ -107,7 +105,6 @@ def change_user_role_by_id(user_id, new_role, current_user):
                 'code': 'USER_NOT_FOUND'
             }
 
-        # Если понижаем админа, проверяем что не последний
         if user_to_update["role"] == "admin" and new_role != "admin":
             cur = conn.execute(
                 "SELECT COUNT(*) as count FROM users WHERE role = 'admin'")
@@ -119,7 +116,6 @@ def change_user_role_by_id(user_id, new_role, current_user):
                     'code': 'LAST_ADMIN_DEMOTE_FORBIDDEN'
                 }
 
-        # Обновляем роль
         conn.execute("UPDATE users SET role = ? WHERE id = ?",
                      (new_role, user_id))
         conn.commit()

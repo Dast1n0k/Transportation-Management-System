@@ -8,7 +8,6 @@ auth_routes = Blueprint("auth_routes", __name__, url_prefix="/auth")
 
 @auth_routes.route("/register", methods=["POST"])
 def register():
-    """Публичная регистрация"""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'JSON data required'}), 400
@@ -30,7 +29,6 @@ def register():
 
 @auth_routes.route("/login", methods=["POST"])
 def login():
-    """Аутентификация пользователя"""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'JSON data required'}), 400
@@ -43,7 +41,6 @@ def login():
     if error:
         return jsonify(error), 401
 
-    # Получаем данные пользователя для ответа
     from app.modules.auth.core.db import get_db
     with get_db() as conn:
         cur = conn.execute(
@@ -64,7 +61,6 @@ def login():
 
 @auth_routes.route("/refresh", methods=["POST"])
 def refresh_token():
-    """Обновление access токена"""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'JSON data required'}), 400
@@ -92,7 +88,6 @@ def refresh_token():
 @auth_routes.route("/verify", methods=["GET"])
 @token_required
 def verify_token():
-    """Проверка валидности токена"""
     user = g.current_user
     return jsonify({
         'valid': True,
@@ -116,7 +111,6 @@ def logout():
 @auth_routes.route("/protected", methods=["GET"])
 @token_required
 def protected():
-    """Защищенный эндпоинт для тестирования"""
     user = g.current_user
     return jsonify({
         'message': f'Hello {user["username"]}! Your role is {user["role"]}.',
