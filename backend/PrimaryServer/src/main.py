@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 import os
 from flask import Flask
 from app.modules.auth import auth_bp
+from app.modules.hris import couriers_bp
 from dotenv import load_dotenv
 from app.modules.auth.core.repositories import UserRepository
 
@@ -27,8 +28,10 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(auth_bp)
+    app.register_blueprint(couriers_bp)
 
     # Error handlers
+
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({
