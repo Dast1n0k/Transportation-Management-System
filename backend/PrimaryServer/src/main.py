@@ -2,7 +2,7 @@
 from flask import Flask
 # from api.sentiment_routes import sentiment_bp
 # from config import Config
-from app.modules.auth.core.repositories import UsersRepository
+from app.modules.auth.core.repositories import UserRepository
 
 def create_app():
     app = Flask(__name__)

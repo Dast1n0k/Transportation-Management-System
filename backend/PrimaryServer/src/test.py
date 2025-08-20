@@ -1,21 +1,19 @@
 import asyncio
-import inject
-from app.shared.database.common import OrmAsyncDatabaseHandler
-from app.modules.auth.core.repositories import UsersRepository
-from app.modules.auth.container import setup
+from app.modules.auth.core.repositories import UserRepository
+from app.modules.auth.container import AuthContainer
 
 async def main():
     # Make sure injection is configured once in your app entrypoint
     # (you already have inject.configure(setup) somewhere)
 
-    inject.configure(setup)
+    authContainer = AuthContainer()
+    authContainer.wire(modules = ["app.modules.auth.core.repositories.user_repository"])
 
-    # You can let `inject` handle dependencies automatically
-    users_repo = UsersRepository()
+    users_repo = UserRepository()
 
     # Create a new user
     new_user = await users_repo.create(
-        username="mark",
+        username="testsubkect",
         password="check",
         role="admin"
     )

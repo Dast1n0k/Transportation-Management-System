@@ -1,1 +1,1 @@
-from .users_repository import UsersRepository
+from .user_repository import UserRepository

@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from typing import Any
-from .database_handler import DatabaseHandler
+from ...common import DatabaseHandler
 
 class OrmSyncDatabaseHandler(DatabaseHandler):
 

@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker as AsyncSessionMaker,
 )
 
-from ..config import DatabaseConfig
-from ..common import OrmAsyncDatabaseHandler
+from ...common import DatabaseConfig
+from ..common.orm_async_database_handler import OrmAsyncDatabaseHandler
 
 class SQLalchemyAsyncDatabaseHandler(OrmAsyncDatabaseHandler):
 

@@ -1,12 +1,16 @@
-import inject
 from sqlalchemy import select
-from app.shared.database.common import OrmAsyncDatabaseHandler
+from dependency_injector.wiring import inject, Provide
+from app.shared.database.orm import OrmAsyncDatabaseHandler
 from ..models import User
+from ...container import AuthContainer
 
-class UsersRepository:
+class UserRepository:
 
-    @inject.autoparams()
-    def __init__(self, database: OrmAsyncDatabaseHandler) -> None:
+    @inject
+    def __init__(
+        self,
+        database: OrmAsyncDatabaseHandler = Provide[AuthContainer.AuthDatabase]
+    ) -> None:
         self.__database = database
         self.__database.connect()
 

@@ -1,5 +1,5 @@
 from typing import Any
-from ..base.database_config import DatabaseConfig
+from ...common import DatabaseConfig
 
 class OrmSessionConfig(DatabaseConfig):
 
