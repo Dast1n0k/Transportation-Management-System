@@ -1,2 +1,9 @@
+# dirs
+
 venv/
-backend/PrimaryServer/.env
+__pycache__/
+
+# files
+
+.db
+.env

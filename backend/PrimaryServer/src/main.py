@@ -3,6 +3,7 @@ import os
 from flask import Flask
 from app.modules.auth import auth_bp
 from dotenv import load_dotenv
+from app.modules.auth.core.repositories import UserRepository
 
 load_dotenv()
 
