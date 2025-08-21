@@ -1,7 +1,8 @@
 from app.modules.auth.core.db import get_db
 import datetime
+from werkzeug.security import check_password_hash
 from flask import Blueprint, request, jsonify, g
-from app.modules.auth.services.auth_service import register_user, authenticate_user, refresh_user_token, check_password_hash
+from app.modules.auth.services.auth_service import register_user
 
 auth_routes = Blueprint("auth_routes", __name__, url_prefix="/auth")
 
