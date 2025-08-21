@@ -86,7 +86,7 @@ def refresh_token():
 
 
 @auth_routes.route("/verify", methods=["GET"])
-@token_required
+# @token_required
 def verify_token():
     user = g.current_user
     return jsonify({
@@ -100,7 +100,7 @@ def verify_token():
 
 
 @auth_routes.route("/logout", methods=["POST"])
-@token_required
+# @token_required
 def logout():
     """Выход из системы"""
     return jsonify({
@@ -109,7 +109,7 @@ def logout():
 
 
 @auth_routes.route("/protected", methods=["GET"])
-@token_required
+# @token_required
 def protected():
     user = g.current_user
     return jsonify({

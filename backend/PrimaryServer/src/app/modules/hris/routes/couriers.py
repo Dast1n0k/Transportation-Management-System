@@ -23,7 +23,7 @@ couriers_routes = Blueprint("couriers_routes", __name__)
 
 
 @couriers_routes.route("/couriers", methods=["POST"])
-@token_required
+# @token_required
 def create_courier():
     """Create courier profile"""
     data = request.get_json()
@@ -48,8 +48,8 @@ def create_courier():
 
 
 @couriers_routes.route("/couriers", methods=["GET"])
-@token_required
-@manager_or_admin_required
+# @token_required
+# @manager_or_admin_required
 def get_couriers():
     """Get list of all couriers"""
     # Pagination parameters
@@ -72,7 +72,7 @@ def get_couriers():
 
 
 @couriers_routes.route("/couriers/<int:courier_id>", methods=["GET"])
-@token_required
+# @token_required
 def get_courier(courier_id):
     """Get specific courier by ID"""
     current_user = g.current_user
@@ -99,7 +99,7 @@ def get_courier(courier_id):
 
 
 @couriers_routes.route("/couriers/my-profile", methods=["GET"])
-@token_required
+# @token_required
 def get_my_courier_profile():
     """Get own courier profile"""
     current_user = g.current_user
@@ -117,8 +117,8 @@ def get_my_courier_profile():
 
 
 @couriers_routes.route("/couriers/<int:courier_id>", methods=["PUT"])
-@token_required
-@manager_or_admin_required  # Changed: Now requires manager or admin role
+# @token_required
+# @manager_or_admin_required  # Changed: Now requires manager or admin role
 def update_courier(courier_id):
     """Update courier profile - Managers and Admins can update any courier"""
     data = request.get_json()
@@ -143,8 +143,8 @@ def update_courier(courier_id):
 
 
 @couriers_routes.route("/couriers/<int:courier_id>", methods=["DELETE"])
-@token_required
-@manager_or_admin_required
+# @token_required
+# @manager_or_admin_required
 def delete_courier(courier_id):
     """Delete courier profile - Managers and Admins can delete couriers"""
     current_user = g.current_user
@@ -162,7 +162,7 @@ def delete_courier(courier_id):
 
 
 @couriers_routes.route("/couriers/search", methods=["GET"])
-@token_required
+# @token_required
 def search_couriers_endpoint():
     """Search couriers by various criteria"""
     # Collect search parameters
@@ -217,8 +217,8 @@ def search_couriers_endpoint():
 
 
 @couriers_routes.route("/couriers/<int:courier_id>/availability", methods=["PUT"])
-@token_required
-@manager_or_admin_required  # Changed: Now requires manager or admin role
+# @token_required
+# @manager_or_admin_required  # Changed: Now requires manager or admin role
 def update_availability(courier_id):
     """Update courier availability status - Managers and Admins can update any courier"""
     data = request.get_json()
@@ -251,8 +251,8 @@ def update_availability(courier_id):
 
 
 @couriers_routes.route("/couriers/statistics", methods=["GET"])
-@token_required
-@manager_or_admin_required
+# @token_required
+# @manager_or_admin_required
 def get_statistics():
     """Get courier statistics"""
     stats = get_courier_statistics()
@@ -265,7 +265,7 @@ def get_statistics():
 
 
 @couriers_routes.route("/couriers/available", methods=["GET"])
-@token_required
+# @token_required
 def get_available_couriers():
     """Get only available couriers"""
     search_params = {
@@ -292,7 +292,7 @@ def get_available_couriers():
 
 
 @couriers_routes.route("/couriers/nearby", methods=["GET"])
-@token_required
+# @token_required
 def get_nearby_couriers():
     """Get nearby couriers (now in miles)"""
     lat = request.args.get('lat')

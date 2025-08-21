@@ -8,8 +8,8 @@ users_routes = Blueprint("users_routes", __name__)
 
 
 @users_routes.route("/users", methods=["GET"])
-@token_required
-@admin_required
+# @token_required
+# @admin_required
 def get_users():
     """Получение списка всех пользователей (только админы)"""
     users = get_all_users()
@@ -21,8 +21,8 @@ def get_users():
 
 
 @users_routes.route("/users", methods=["POST"])
-@token_required
-@admin_required
+# @token_required
+# @admin_required
 def create_user():
     """Создание нового пользователя (только админы)"""
     data = request.get_json()
@@ -46,8 +46,8 @@ def create_user():
 
 
 @users_routes.route("/users/<user_id>", methods=["DELETE"])
-@token_required
-@admin_required
+# @token_required
+# @admin_required
 def delete_user(user_id):
     """Удаление пользователя (только админы)"""
     current_user = g.current_user
@@ -65,8 +65,8 @@ def delete_user(user_id):
 
 
 @users_routes.route("/users/<user_id>/role", methods=["PUT"])
-@token_required
-@admin_required
+# @token_required
+# @admin_required
 def change_user_role(user_id):
     """Изменение роли пользователя (только админы)"""
     current_user = g.current_user
