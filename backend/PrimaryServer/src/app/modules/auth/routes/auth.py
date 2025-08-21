@@ -1,7 +1,7 @@
+from app.modules.auth.core.db import get_db
 import datetime
 from flask import Blueprint, request, jsonify, g
-from app.modules.auth.decorators.auth import token_required
-from app.modules.auth.services.auth_service import register_user, authenticate_user, refresh_user_token
+from app.modules.auth.services.auth_service import register_user, authenticate_user, refresh_user_token, check_password_hash
 
 auth_routes = Blueprint("auth_routes", __name__, url_prefix="/auth")
 
@@ -36,21 +36,23 @@ def login():
     username = data.get("username", "").strip()
     password = data.get("password", "")
 
-    access_token, refresh_token, error = authenticate_user(username, password)
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
 
-    if error:
-        return jsonify(error), 401
-
-    from app.modules.auth.core.db import get_db
     with get_db() as conn:
         cur = conn.execute(
-            "SELECT * FROM users WHERE username = ?", (username,))
+            "SELECT * FROM users WHERE username = ?", (username,)
+        )
         user = cur.fetchone()
+
+    if not user or not check_password_hash(user["password"], password):
+        return jsonify({
+            'error': 'Invalid credentials',
+            'code': 'INVALID_CREDENTIALS'
+        }), 401
 
     return jsonify({
         'message': 'Login successful',
-        'access_token': access_token,
-        'refresh_token': refresh_token,
         'user': {
             'id': user['id'],
             'username': user['username'],
@@ -59,30 +61,30 @@ def login():
     }), 200
 
 
-@auth_routes.route("/refresh", methods=["POST"])
-def refresh_token():
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'JSON data required'}), 400
+# @auth_routes.route("/refresh", methods=["POST"])
+# def refresh_token():
+#     data = request.get_json()
+#     if not data:
+#         return jsonify({'error': 'JSON data required'}), 400
 
-    refresh_token = data.get('refresh_token')
-    if not refresh_token:
-        return jsonify({
-            'error': 'Refresh token is required',
-            'code': 'TOKEN_REQUIRED'
-        }), 400
+#     refresh_token = data.get('refresh_token')
+#     if not refresh_token:
+#         return jsonify({
+#             'error': 'Refresh token is required',
+#             'code': 'TOKEN_REQUIRED'
+#         }), 400
 
-    new_access_token, new_refresh_token, error = refresh_user_token(
-        refresh_token)
+#     new_access_token, new_refresh_token, error = refresh_user_token(
+#         refresh_token)
 
-    if error:
-        status_code = 404 if error.get('code') == 'USER_NOT_FOUND' else 401
-        return jsonify(error), status_code
+#     if error:
+#         status_code = 404 if error.get('code') == 'USER_NOT_FOUND' else 401
+#         return jsonify(error), status_code
 
-    return jsonify({
-        'access_token': new_access_token,
-        'refresh_token': new_refresh_token
-    }), 200
+#     return jsonify({
+#         'access_token': new_access_token,
+#         'refresh_token': new_refresh_token
+#     }), 200
 
 
 @auth_routes.route("/verify", methods=["GET"])

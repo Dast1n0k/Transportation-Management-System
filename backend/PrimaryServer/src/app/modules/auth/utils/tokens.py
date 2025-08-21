@@ -48,31 +48,31 @@ def get_current_user():
     return None
 
 
-def generate_tokens(user):
-    """Генерирует access и refresh токены для пользователя"""
-    now = datetime.datetime.utcnow()
+# def generate_tokens(user):
+#     """Генерирует access и refresh токены для пользователя"""
+#     now = datetime.datetime.utcnow()
 
-    # Access token (короткое время жизни)
-    access_payload = {
-        'user_id': user['id'],
-        'username': user['username'],
-        'role': user['role'],
-        'type': 'access',
-        'iat': now,
-        'exp': now + datetime.timedelta(hours=2)  # 2 часа
-    }
+#     # Access token (короткое время жизни)
+#     access_payload = {
+#         'user_id': user['id'],
+#         'username': user['username'],
+#         'role': user['role'],
+#         'type': 'access',
+#         'iat': now,
+#         'exp': now + datetime.timedelta(hours=2)  # 2 часа
+#     }
 
-    # Refresh token (длинное время жизни)
-    refresh_payload = {
-        'user_id': user['id'],
-        'type': 'refresh',
-        'iat': now,
-        'exp': now + datetime.timedelta(days=30)  # 30 дней
-    }
+#     # Refresh token (длинное время жизни)
+#     refresh_payload = {
+#         'user_id': user['id'],
+#         'type': 'refresh',
+#         'iat': now,
+#         'exp': now + datetime.timedelta(days=30)  # 30 дней
+#     }
 
-    access_token = jwt.encode(
-        access_payload, current_app.config['SECRET_KEY'], algorithm='HS256')
-    refresh_token = jwt.encode(
-        refresh_payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+#     access_token = jwt.encode(
+#         access_payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+#     refresh_token = jwt.encode(
+#         refresh_payload, current_app.config['SECRET_KEY'], algorithm='HS256')
 
-    return access_token, refresh_token
+#     return access_token, refresh_token
