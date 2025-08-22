@@ -28,9 +28,13 @@ public class CourierRepository : ICourierRepository
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        var serverPort = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_PORT");
-        var serverEndpoint = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_URI");
+        var serverPort = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_PORT") ?? "5000";
+        var serverEndpoint = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_URI") ?? "localhost";
         _baseUri = $"http://{serverEndpoint}:{serverPort}";
+        
+        System.Diagnostics.Debug.WriteLine($"CourierRepository: SERVER_ENDPOINT_URI = {serverEndpoint}");
+        System.Diagnostics.Debug.WriteLine($"CourierRepository: SERVER_ENDPOINT_PORT = {serverPort}");
+        System.Diagnostics.Debug.WriteLine($"CourierRepository: Base URI = {_baseUri}");
 
         if (_httpClient.BaseAddress == null)
             _httpClient.BaseAddress = new Uri(_baseUri);
@@ -40,13 +44,25 @@ public class CourierRepository : ICourierRepository
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"CourierRepository: Making GET request to {_baseUri}/couriers");
             var response = await _httpClient.GetAsync("/couriers");
             var responseContent = await response.Content.ReadAsStringAsync();
+            
+            System.Diagnostics.Debug.WriteLine($"CourierRepository: Response status: {response.StatusCode}");
+            System.Diagnostics.Debug.WriteLine($"CourierRepository: Response content: {responseContent}");
 
             if (response.IsSuccessStatusCode)
             {
                 var result = JsonSerializer.Deserialize<CourierListResponse>(responseContent, _jsonOptions);
-                return result?.Couriers ?? new List<Courier>();
+                var couriers = result?.Couriers ?? new List<Courier>();
+                System.Diagnostics.Debug.WriteLine($"CourierRepository: Deserialized {couriers.Count} couriers");
+                
+                foreach (var courier in couriers)
+                {
+                    System.Diagnostics.Debug.WriteLine($"CourierRepository: Courier ID={courier.Id}, Name={courier.Name}, Lat={courier.Latitude}, Lng={courier.Longitude}, Vehicle={courier.VehicleType}, Available={courier.IsAvailable}");
+                }
+                
+                return couriers;
             }
 
             var errorMessage = response.StatusCode switch

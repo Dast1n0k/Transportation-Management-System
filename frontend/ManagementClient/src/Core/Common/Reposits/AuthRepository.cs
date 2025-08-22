@@ -25,9 +25,11 @@ public class AuthRepository : IAuthRepository
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        var serverPort = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_PORT");
-        var serverEndpoint = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_URI");
+        var serverPort = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_PORT") ?? "5000";
+        var serverEndpoint = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_URI") ?? "localhost";
         _baseUri = $"http://{serverEndpoint}:{serverPort}";
+        
+        System.Diagnostics.Debug.WriteLine($"AuthRepository: Base URI = {_baseUri}");
 
         if (_httpClient.BaseAddress == null)
             _httpClient.BaseAddress = new Uri(_baseUri);

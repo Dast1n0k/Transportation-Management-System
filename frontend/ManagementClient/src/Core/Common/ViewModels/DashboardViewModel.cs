@@ -19,6 +19,7 @@ public class DashboardViewModel : BaseViewModel
     private string _zipCode = string.Empty;
     private int _radiusInMiles = 5;
     private bool _isMapView = true;
+    private bool _needsMapRedraw = false;
     private ObservableCollection<Courier> _deliveryPersons = new();
     private ObservableCollection<Courier> _filteredDeliveryPersons = new();
 
@@ -37,7 +38,7 @@ public class DashboardViewModel : BaseViewModel
 
         LoadDeliveryPersonsCommand = new AsyncRelayCommand(LoadDeliveryPersonsAsync);
         SearchCommand = new AsyncRelayCommand(SearchDeliveryPersonsAsync, CanSearch);
-        SwitchToMapViewCommand = new RelayCommand(() => IsMapView = true);
+        SwitchToMapViewCommand = new AsyncRelayCommand(SwitchToMapViewAsync);
         SwitchToListViewCommand = new AsyncRelayCommand(NavigateToDeliveryGuysAsync);
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);
         AddNewDeliveryPersonCommand = new AsyncRelayCommand(AddNewDeliveryPersonAsync);
@@ -46,7 +47,11 @@ public class DashboardViewModel : BaseViewModel
             async person => await DeleteDeliveryPersonAsync(person)
         );
 
-        _courierService.CouriersChanged += async (s, e) => await RefreshAsync();
+        _courierService.CouriersChanged += (s, e) => 
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: CouriersChanged event - marking for map redraw");
+            _needsMapRedraw = true;
+        };
     }
 
     public ObservableCollection<Courier> DeliveryPersons
@@ -104,30 +109,45 @@ public class DashboardViewModel : BaseViewModel
 
     public async Task InitializeAsync()
     {
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync called");
         await LoadDeliveryPersonsAsync();
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync completed");
     }
 
     private async Task LoadDeliveryPersonsAsync()
     {
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: LoadDeliveryPersonsAsync called");
         await ExecuteAsync(async () =>
         {
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Calling CourierService.GetCouriersAsync()");
             var couriers = await _courierService.GetCouriersAsync();
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Received {couriers?.Count() ?? 0} couriers from service");
 
+            // Force complete collection refresh
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Clearing collections completely");
             DeliveryPersons.Clear();
+            FilteredDeliveryPersons.Clear();
+            
+            // Add fresh data
             foreach (var courier in couriers)
             {
                 DeliveryPersons.Add(courier);
+                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Added courier ID={courier.Id}, Name={courier.Name}, Vehicle={courier.VehicleType}, Available={courier.IsAvailable}");
             }
 
-            FilteredDeliveryPersons.Clear();
             foreach (var courier in DeliveryPersons)
             {
                 FilteredDeliveryPersons.Add(courier);
+                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Added courier {courier.Name} to FilteredDeliveryPersons");
             }
+
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Final counts - DeliveryPersons: {DeliveryPersons.Count}, FilteredDeliveryPersons: {FilteredDeliveryPersons.Count}");
 
             OnPropertyChanged(nameof(ActiveDeliveryCount));
             OnPropertyChanged(nameof(BusyDeliveryCount));
             OnPropertyChanged(nameof(OfflineDeliveryCount));
+            OnPropertyChanged(nameof(DeliveryPersons));
+            OnPropertyChanged(nameof(FilteredDeliveryPersons));
         });
     }
 
@@ -164,10 +184,46 @@ public class DashboardViewModel : BaseViewModel
         {
             await ExecuteAsync(async () =>
             {
+                System.Diagnostics.Debug.WriteLine("DashboardViewModel: Logging out - clearing data and navigating to login");
+                
+                // Clear courier data
+                _courierService.ClearCouriers();
+                DeliveryPersons.Clear();
+                FilteredDeliveryPersons.Clear();
+                
+                // Logout from auth service
                 await _authService.LogoutAsync();
-                await _navigationService.NavigateToAsync("//login");
+                
+                // Navigate to login (correct route)
+                await _navigationService.NavigateToAsync("login");
+                
+                System.Diagnostics.Debug.WriteLine("DashboardViewModel: Logout completed");
             });
         }
+    }
+
+    private async Task SwitchToMapViewAsync()
+    {
+        await ExecuteAsync(async () =>
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: LITERAL REDRAW - Switching to map view, forcing fresh server fetch");
+            
+            // LITERALLY fetch from server every single time
+            await _courierService.RefreshCouriersAsync();
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Fresh data fetched from server");
+            
+            // LITERALLY reload collections from fresh server data
+            await LoadDeliveryPersonsAsync();
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Collections reloaded with {FilteredDeliveryPersons.Count} couriers");
+            
+            // Set map view (this will trigger map redraw with completely fresh data)
+            IsMapView = true;
+            
+            // Reset the redraw flag
+            _needsMapRedraw = false;
+            
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Map view activated - LITERAL REDRAW with {FilteredDeliveryPersons.Count} fresh couriers");
+        });
     }
 
     private async Task NavigateToDeliveryGuysAsync()
@@ -232,13 +288,29 @@ public class DashboardViewModel : BaseViewModel
 
     public async Task RefreshAsync()
     {
-        if (string.IsNullOrWhiteSpace(ZipCode))
-        {
-            await LoadDeliveryPersonsAsync();
-        }
-        else
-        {
-            await SearchDeliveryPersonsAsync();
-        }
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: RefreshAsync called - forcing server fetch and complete refresh");
+        
+        // FORCE fresh data from server first
+        await _courierService.RefreshCouriersAsync();
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: Server refresh completed");
+        
+        // Then reload local collections
+        await LoadDeliveryPersonsAsync();
+        
+        // Always force collection notifications after refresh
+        NotifyCollectionChanged();
+        
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: RefreshAsync completed with forced notifications");
+    }
+
+    // Method to manually trigger collection change notifications
+    public void NotifyCollectionChanged()
+    {
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: NotifyCollectionChanged called");
+        OnPropertyChanged(nameof(FilteredDeliveryPersons));
+        OnPropertyChanged(nameof(DeliveryPersons));
+        OnPropertyChanged(nameof(ActiveDeliveryCount));
+        OnPropertyChanged(nameof(BusyDeliveryCount));
+        OnPropertyChanged(nameof(OfflineDeliveryCount));
     }
 }

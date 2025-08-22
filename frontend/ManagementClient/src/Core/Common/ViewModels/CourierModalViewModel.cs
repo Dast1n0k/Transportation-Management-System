@@ -264,7 +264,12 @@ public class CourierModalViewModel : BaseViewModel
                 // If we're returning to DashboardPage, refresh DashboardViewModel
                 if (currentPage?.BindingContext is DashboardViewModel dashboardViewModel)
                 {
+                    System.Diagnostics.Debug.WriteLine("CourierModalViewModel: Refreshing DashboardViewModel after save");
                     await dashboardViewModel.RefreshAsync();
+                    
+                    // Force collection change notification for immediate map update
+                    System.Diagnostics.Debug.WriteLine("CourierModalViewModel: Triggering collection change notification");
+                    dashboardViewModel.NotifyCollectionChanged();
                 }
                 // If we're returning to DeliveryGuysPage, refresh DeliveryGuysViewModel
                 else if (currentPage?.BindingContext is DeliveryGuysViewModel deliveryGuysViewModel)

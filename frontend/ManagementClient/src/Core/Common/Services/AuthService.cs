@@ -44,7 +44,9 @@ public class AuthService : IAuthService
             if (response?.IsSuccess == true && response.User != null)
             {
                 _currentUser = response.User;
+                System.Diagnostics.Debug.WriteLine("AuthService: Login successful, refreshing couriers...");
                 await _courierService.RefreshCouriersAsync();
+                System.Diagnostics.Debug.WriteLine("AuthService: Couriers refresh completed");
             }
             else
             {

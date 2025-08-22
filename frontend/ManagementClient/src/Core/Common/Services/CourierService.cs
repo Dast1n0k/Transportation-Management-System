@@ -21,9 +21,27 @@ public class CourierService : ICourierService
 
     public async Task RefreshCouriersAsync()
     {
-        var couriers = await _courierRepository.ReadCouriersAsync();
-        CouriersChanged?.Invoke(this, EventArgs.Empty);
-        _couriers = couriers.ToList();
+        System.Diagnostics.Debug.WriteLine("CourierService: Starting RefreshCouriersAsync...");
+        try
+        {
+            var couriers = await _courierRepository.ReadCouriersAsync();
+            System.Diagnostics.Debug.WriteLine($"CourierService: Fetched {couriers?.Count() ?? 0} couriers from repository");
+            
+            _couriers = couriers.ToList();
+            
+            foreach (var courier in _couriers)
+            {
+                System.Diagnostics.Debug.WriteLine($"CourierService: Courier {courier.Name} - Lat: {courier.Latitude}, Lng: {courier.Longitude}, Vehicle: {courier.VehicleType}, Available: {courier.IsAvailable}");
+            }
+            
+            CouriersChanged?.Invoke(this, EventArgs.Empty);
+            System.Diagnostics.Debug.WriteLine("CourierService: RefreshCouriersAsync completed successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CourierService: Error in RefreshCouriersAsync: {ex.Message}");
+            throw;
+        }
     }
 
     public void ClearCouriers()
@@ -38,6 +56,11 @@ public class CourierService : ICourierService
 
         var newCourier = await _courierRepository.CreateCourierAsync(courier);
         _couriers.Add(newCourier);
+        System.Diagnostics.Debug.WriteLine($"CourierService: Added new courier {newCourier.Name} to local collection. Total count: {_couriers.Count}");
+        
+        // Trigger the event to update the map
+        CouriersChanged?.Invoke(this, EventArgs.Empty);
+        System.Diagnostics.Debug.WriteLine("CourierService: CouriersChanged event triggered after create");
 
         return newCourier;
     }
@@ -66,14 +89,31 @@ public class CourierService : ICourierService
         if (courier.Id <= 0)
             throw new ArgumentException("Courier ID must be greater than 0", nameof(courier));
 
+        System.Diagnostics.Debug.WriteLine($"CourierService: Modifying courier ID={courier.Id}, Name={courier.Name}, Vehicle={courier.VehicleType}, Available={courier.IsAvailable}");
+        
         var updatedCourier = await _courierRepository.UpdateCourierAsync(courier);
+        System.Diagnostics.Debug.WriteLine($"CourierService: Repository returned updated courier: ID={updatedCourier.Id}, Name={updatedCourier.Name}, Vehicle={updatedCourier.VehicleType}, Available={updatedCourier.IsAvailable}");
 
         var existingIndex = _couriers.FindIndex(c => c.Id == courier.Id);
 
         if (existingIndex >= 0)
         {
             _couriers[existingIndex] = updatedCourier;
+            System.Diagnostics.Debug.WriteLine($"CourierService: Updated courier {updatedCourier.Name} in local collection at index {existingIndex}");
         }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"CourierService: Warning - Courier with ID {courier.Id} not found in local collection for update, adding it");
+            _couriers.Add(updatedCourier);
+        }
+
+        // Force refresh from repository to ensure we have latest data
+        System.Diagnostics.Debug.WriteLine("CourierService: Forcing refresh from repository after modify");
+        await RefreshCouriersAsync();
+        
+        // Trigger the event to update the map
+        CouriersChanged?.Invoke(this, EventArgs.Empty);
+        System.Diagnostics.Debug.WriteLine("CourierService: CouriersChanged event triggered after modify");
 
         return updatedCourier;
     }
@@ -86,7 +126,14 @@ public class CourierService : ICourierService
         var result = await _courierRepository.DeleteCourierAsync(id);
 
         if (result)
-            _couriers.RemoveAll(c => c.Id == id);
+        {
+            var removedCount = _couriers.RemoveAll(c => c.Id == id);
+            System.Diagnostics.Debug.WriteLine($"CourierService: Removed {removedCount} courier(s) with ID {id}. Total count: {_couriers.Count}");
+            
+            // Trigger the event to update the map
+            CouriersChanged?.Invoke(this, EventArgs.Empty);
+            System.Diagnostics.Debug.WriteLine("CourierService: CouriersChanged event triggered after delete");
+        }
 
         return result;
     }

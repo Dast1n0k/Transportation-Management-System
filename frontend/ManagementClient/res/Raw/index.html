@@ -8,37 +8,361 @@
     <style>
         #map { height: 100vh; width: 100%; }
         body { margin:0; padding:0; }
+        
+        /* Custom marker styles */
+        .courier-marker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+        
+        .courier-marker:hover {
+            transform: scale(1.1);
+        }
+        
+        .courier-marker.available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            animation: pulse-available 2s ease-in-out infinite;
+        }
+        
+        .courier-marker.unavailable {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            opacity: 0.8;
+        }
+        
+        .courier-marker::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .courier-marker.available::after {
+            background-color: #4CAF50;
+        }
+        
+        .courier-marker.unavailable::after {
+            background-color: #f44336;
+        }
+        
+        @keyframes pulse-available {
+            0%, 100% { 
+                box-shadow: 0 3px 10px rgba(0,0,0,0.4), 0 0 0 0 rgba(76, 175, 80, 0.7); 
+            }
+            50% { 
+                box-shadow: 0 3px 10px rgba(0,0,0,0.4), 0 0 0 8px rgba(76, 175, 80, 0); 
+            }
+        }
+        
+        .courier-popup {
+            font-family: Arial, sans-serif;
+        }
+        
+        .courier-popup .name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .courier-popup .details {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .courier-popup .status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        
+        .courier-popup .status.available {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .courier-popup .status.unavailable {
+            background-color: #f44336;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div id='map'></div>
     <script>
-        // Ограничивающий прямоугольник США
-        var usaBounds = L.latLngBounds(
-            [24.396308, -125.000000], // юго-запад
-            [49.384358, -66.934570]   // северо-восток
+        // North American continent bounds with ocean buffer
+        var northAmericaBounds = L.latLngBounds(
+            [20.0, -135.0],  // Southwest (includes Pacific Ocean)
+            [55.0, -60.0]    // Northeast (includes Atlantic Ocean)
         );
 
-        // Инициализация карты
+        // Initialize map
         var map = L.map('map', {
-            zoomControl: true,
-            maxBounds: usaBounds,
+            zoomControl: false,
+            maxBounds: northAmericaBounds,
             maxBoundsViscosity: 1.0
         });
 
-        // Подложка
+        // Add tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Центрируем на США
-        map.fitBounds(usaBounds);
+        // Set initial view to center of expanded bounds (no auto-fitting)
+        map.setView([37.5, -97.5], 4);
 
-        // Пример: маркер в Нью-Йорке (ZIP 10001)
-        L.marker([40.7506, -73.9970]).addTo(map)
-            .bindPopup('Водитель: ZIP 10001')
-            .openPopup();
+        // Global variables for markers management
+        var courierMarkers = L.layerGroup().addTo(map);
+        var searchRadiusCircle = null;
+        var lastMarkerCount = 0;
+        var isFirstLoad = true;
+        var redrawCounter = 0;
+
+        // Vehicle type icons mapping (3 different vehicle types)
+        var vehicleIcons = {
+            'sprinter': '🚐',           // Van emoji for sprinter
+            'small_straight': '🚚',     // Truck emoji for small straight
+            'large_straight': '🚛',     // Large truck emoji for large straight  
+            'straight_small': '🚚',     // Alternative naming
+            'straight_large': '🚛',     // Alternative naming
+            'default': '📦'             // Package emoji for unknown types
+        };
+
+        // Function to get vehicle icon
+        function getVehicleIcon(vehicleType) {
+            return vehicleIcons[vehicleType.toLowerCase()] || vehicleIcons['default'];
+        }
+
+        // Function to create custom marker icon
+        function createCourierIcon(vehicleType, isAvailable) {
+            var icon = getVehicleIcon(vehicleType);
+            var statusClass = isAvailable ? 'available' : 'unavailable';
+            
+            return L.divIcon({
+                className: 'courier-marker ' + statusClass,
+                html: icon,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -25]
+            });
+        }
+
+        // Function to create popup content
+        function createPopupContent(courier) {
+            var isAvailable = courier.IsAvailable === true;
+            var statusText = isAvailable ? 'Available' : 'Unavailable';
+            var statusClass = isAvailable ? 'available' : 'unavailable';
+            var vehicleIcon = getVehicleIcon(courier.VehicleType);
+            
+            return `
+                <div class="courier-popup">
+                    <div class="name">${courier.Name} ${courier.Surname || ''}</div>
+                    <div class="details">
+                        <strong>📞</strong> ${courier.Phone || 'N/A'}<br>
+                        <strong>${vehicleIcon}</strong> ${courier.VehicleType}<br>
+                        <strong>📍</strong> ${courier.Zipcode || 'N/A'}<br>
+                        <strong>🗺️</strong> ${parseFloat(courier.Latitude).toFixed(4)}, ${parseFloat(courier.Longitude).toFixed(4)}
+                    </div>
+                    <div class="status ${statusClass}">${statusText}</div>
+                </div>
+            `;
+        }
+
+        // Function to update courier markers (called from C#)
+        window.updateCourierMarkers = function(couriers) {
+            try {
+                redrawCounter++;
+                console.log(`=== LITERAL REDRAW #${redrawCounter} - updateCourierMarkers called ===`);
+                console.log('Timestamp:', new Date().toISOString());
+                console.log('Received couriers data:', couriers);
+                console.log('Data type:', typeof couriers);
+                console.log('Is array:', Array.isArray(couriers));
+                console.log('Length:', couriers ? couriers.length : 'undefined');
+                
+                // Clear existing markers
+                var existingCount = courierMarkers.getLayers().length;
+                courierMarkers.clearLayers();
+                console.log(`Cleared ${existingCount} existing markers`);
+                
+                var markersAdded = 0;
+                
+                // Add new markers for each courier
+                couriers.forEach(function(courier, index) {
+                    console.log(`Processing courier ${index + 1}:`, {
+                        name: courier.Name,
+                        surname: courier.Surname,
+                        lat: courier.Latitude,
+                        lng: courier.Longitude,
+                        vehicleType: courier.VehicleType,
+                        isAvailable: courier.IsAvailable
+                    });
+                    
+                    if (courier.Latitude && courier.Longitude && 
+                        courier.Latitude !== 0 && courier.Longitude !== 0) {
+                        
+                        var isAvailable = courier.IsAvailable === true;
+                        var icon = createCourierIcon(courier.VehicleType, isAvailable);
+                        
+                        var marker = L.marker([courier.Latitude, courier.Longitude], {
+                            icon: icon,
+                            title: `${courier.Name} - ${courier.VehicleType} (${isAvailable ? 'Available' : 'Unavailable'})`
+                        });
+                        
+                        marker.bindPopup(createPopupContent(courier));
+                        courierMarkers.addLayer(marker);
+                        markersAdded++;
+                    } else {
+                        console.warn(`Skipping courier ${courier.Name} - invalid coordinates:`, courier.Latitude, courier.Longitude);
+                    }
+                });
+                
+                console.log(`LITERAL REDRAW #${redrawCounter}: Successfully updated map with ${markersAdded} out of ${couriers.length} couriers`);
+                
+                // No auto-fit - user has full control of map at all times
+                if (isFirstLoad) {
+                    isFirstLoad = false;
+                    console.log('First load completed, user has full control of map');
+                }
+                
+            } catch (error) {
+                console.error('Error updating courier markers:', error);
+            }
+        };
+
+        // Function to add search radius circle (called from C#)
+        window.addSearchRadius = function(lat, lng, radiusInMiles, zipcode) {
+            try {
+                // Remove existing circle
+                if (searchRadiusCircle) {
+                    map.removeLayer(searchRadiusCircle);
+                }
+                
+                // Convert miles to meters (1 mile = 1609.34 meters)
+                var radiusInMeters = radiusInMiles * 1609.34;
+                
+                // Create circle
+                searchRadiusCircle = L.circle([lat, lng], {
+                    color: '#3388ff',
+                    fillColor: '#3388ff',
+                    fillOpacity: 0.1,
+                    radius: radiusInMeters
+                }).addTo(map);
+                
+                // Add center marker
+                var centerMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'search-center-marker',
+                        html: '📍',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    })
+                }).addTo(map);
+                
+                centerMarker.bindPopup(`Search Center: ${zipcode}<br>Radius: ${radiusInMiles} miles`);
+                
+                // Fit map to circle bounds
+                map.fitBounds(searchRadiusCircle.getBounds(), { padding: [20, 20] });
+                
+                console.log('Added search radius for ' + zipcode);
+            } catch (error) {
+                console.error('Error adding search radius:', error);
+            }
+        };
+
+        // Function to clear search radius (called from C#)
+        window.clearSearchRadius = function() {
+            try {
+                if (searchRadiusCircle) {
+                    map.removeLayer(searchRadiusCircle);
+                    searchRadiusCircle = null;
+                }
+                
+                // Fit back to North America bounds
+                map.fitBounds(northAmericaBounds);
+                
+                console.log('Cleared search radius');
+            } catch (error) {
+                console.error('Error clearing search radius:', error);
+            }
+        };
+
+        // Function to center map on specific coordinates
+        window.centerMapOn = function(lat, lng, zoom) {
+            try {
+                zoom = zoom || 10;
+                map.setView([lat, lng], zoom);
+                console.log('Centered map on', lat, lng);
+            } catch (error) {
+                console.error('Error centering map:', error);
+            }
+        };
+
+        // Debug function to log map state
+        window.getMapState = function() {
+            return {
+                center: map.getCenter(),
+                zoom: map.getZoom(),
+                markerCount: courierMarkers.getLayers().length
+            };
+        };
+
+        console.log('Courier map initialized successfully');
+        
+        // Debug function to test map with sample data (for testing only)
+        window.testMapWithSampleData = function() {
+            console.log('Testing map with sample courier data...');
+            var sampleCouriers = [
+                {
+                    Name: "John Smith",
+                    Phone: "555-1001", 
+                    Location: "New York, NY 10001",
+                    Latitude: 40.7506,
+                    Longitude: -73.9970,
+                    VehicleType: "sprinter",
+                    Status: "true"
+                },
+                {
+                    Name: "Jane Doe",
+                    Phone: "555-1002",
+                    Location: "Los Angeles, CA 90210", 
+                    Latitude: 34.0522,
+                    Longitude: -118.2437,
+                    VehicleType: "small_straight",
+                    Status: "false"
+                },
+                {
+                    Name: "Bob Johnson",
+                    Phone: "555-1003",
+                    Location: "Chicago, IL 60601",
+                    Latitude: 41.8781,
+                    Longitude: -87.6298,
+                    VehicleType: "large_straight", 
+                    Status: "true"
+                }
+            ];
+            
+            window.updateCourierMarkers(sampleCouriers);
+            return 'Sample data loaded successfully';
+        };
     </script>
 </body>
 </html>
