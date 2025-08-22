@@ -1,11 +1,13 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Maui.Storage;
 using Microsoft.Maui.Controls;
 using ManagementClient.Core.Common.ViewModels;
 using ManagementClient.Core.Common.Services;
+using ManagementClient.Core.Common.Reposits;
 
 namespace ManagementClient.Core.Common.Views.Bridges;
 
@@ -13,19 +15,21 @@ public partial class DashboardPage : ContentPage
 {
     private readonly DashboardViewModel _viewModel;
     private readonly ICourierService _courierService;
+    private readonly ICourierRepository _courierRepository;
     private bool _isMapInitialized = false;
     private int _mapRedrawCounter = 0;
 
-    public DashboardPage(DashboardViewModel viewModel, ICourierService courierService)
+    public DashboardPage(DashboardViewModel viewModel, ICourierService courierService, ICourierRepository courierRepository)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _courierService = courierService;
+        _courierRepository = courierRepository;
         BindingContext = viewModel;
 
         // Subscribe to property changes for tab switching
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-        
+
         // Subscribe to courier service changes to force map redraw
         _courierService.CouriersChanged += OnCourierServiceChanged;
     }
@@ -36,16 +40,16 @@ public partial class DashboardPage : ContentPage
 
         try
         {
-            System.Diagnostics.Debug.WriteLine("DashboardPage: OnAppearing started");
-            
+            System.Diagnostics.Debug.WriteLine("DashboardPage: OnAppearing started - FORCING DATABASE REFRESH");
+
             if (!_isMapInitialized)
             {
                 System.Diagnostics.Debug.WriteLine("DashboardPage: Initializing WebView...");
-                
+
                 // Start WebView initialization but don't wait too long
                 var initTask = InitializeMapWebViewAsync();
                 var timeoutTask = Task.Delay(3000); // 3 second timeout
-                
+
                 var completedTask = await Task.WhenAny(initTask, timeoutTask);
                 if (completedTask == timeoutTask)
                 {
@@ -55,21 +59,30 @@ public partial class DashboardPage : ContentPage
                 {
                     System.Diagnostics.Debug.WriteLine("DashboardPage: WebView initialization completed");
                 }
-                
+
                 _isMapInitialized = true;
             }
 
-            // Initialize the ViewModel with local data only (no server fetch)
-            System.Diagnostics.Debug.WriteLine("DashboardPage: Initializing ViewModel with local data...");
-            await _viewModel.InitializeAsync();
-            
-            System.Diagnostics.Debug.WriteLine($"DashboardPage: ViewModel has {_viewModel.FilteredDeliveryPersons.Count} filtered couriers");
-            
-            // Start trying to update markers - simplified approach
-            System.Diagnostics.Debug.WriteLine("DashboardPage: Starting marker updates...");
-            
-            // Update map once with current local data (no background retries)
-            await UpdateMapMarkersAsync();
+            // EXPLICITLY PERFORM GET REQUEST TO DATABASE VIA COURIERREPOSITORY
+            System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICITLY PERFORMING GET REQUEST TO DATABASE VIA CourierRepository.ReadCouriersAsync()");
+            var freshCouriersFromDb = await _courierRepository.ReadCouriersAsync();
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: EXPLICIT GET REQUEST COMPLETED - Retrieved {freshCouriersFromDb.Count()} couriers directly from database");
+
+            // LITERALLY DELETE ALL OLD WAYPOINTS AND ADD ALL NEW ONES
+            System.Diagnostics.Debug.WriteLine("DashboardPage: LITERALLY DELETING ALL OLD WAYPOINTS AND ADDING ALL NEW ONES FROM DATABASE");
+            await ExplicitlyUpdateMapWithFreshDatabaseDataAsync(freshCouriersFromDb);
+
+            // Also update the ViewModel with fresh database data
+            System.Diagnostics.Debug.WriteLine("DashboardPage: Updating ViewModel with fresh database data...");
+            _viewModel.DeliveryPersons.Clear();
+            _viewModel.FilteredDeliveryPersons.Clear();
+            foreach (var courier in freshCouriersFromDb)
+            {
+                _viewModel.DeliveryPersons.Add(courier);
+                _viewModel.FilteredDeliveryPersons.Add(courier);
+            }
+
+            System.Diagnostics.Debug.WriteLine("DashboardPage: Database refresh and map update completed");
         }
         catch (Exception ex)
         {
@@ -93,17 +106,29 @@ public partial class DashboardPage : ContentPage
 
     private void OnCourierServiceChanged(object sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("DashboardPage: CourierService.CouriersChanged event triggered - forcing map redraw");
+        System.Diagnostics.Debug.WriteLine("DashboardPage: CourierService.CouriersChanged event triggered - EXPLICITLY PERFORMING DATABASE GET REQUEST");
         if (_viewModel.IsMapView)
         {
             _mapRedrawCounter++;
-            System.Diagnostics.Debug.WriteLine($"DashboardPage: LITERAL REDRAW #{_mapRedrawCounter} - CourierService changed, updating map");
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: REDRAW #{_mapRedrawCounter} - CourierService changed, EXPLICITLY FETCHING FROM DATABASE");
             Dispatcher.Dispatch(async () =>
             {
-                // Force ViewModel to reload data first
-                await _viewModel.RefreshAsync();
-                // Then update map
-                await UpdateMapMarkersAsync();
+                // EXPLICITLY PERFORM GET REQUEST TO DATABASE VIA COURIERREPOSITORY
+                System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICITLY PERFORMING GET REQUEST TO DATABASE VIA CourierRepository.ReadCouriersAsync()");
+                var freshCouriersFromDb = await _courierRepository.ReadCouriersAsync();
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: EXPLICIT GET REQUEST COMPLETED - Retrieved {freshCouriersFromDb.Count()} couriers directly from database");
+
+                // LITERALLY DELETE ALL OLD WAYPOINTS AND ADD ALL NEW ONES
+                await ExplicitlyUpdateMapWithFreshDatabaseDataAsync(freshCouriersFromDb);
+
+                // Update ViewModel with fresh database data
+                _viewModel.DeliveryPersons.Clear();
+                _viewModel.FilteredDeliveryPersons.Clear();
+                foreach (var courier in freshCouriersFromDb)
+                {
+                    _viewModel.DeliveryPersons.Add(courier);
+                    _viewModel.FilteredDeliveryPersons.Add(courier);
+                }
             });
         }
     }
@@ -116,7 +141,7 @@ public partial class DashboardPage : ContentPage
             {
                 var mapState = await CourierMapWebView.EvaluateJavaScriptAsync("window.getMapState ? JSON.stringify(window.getMapState()) : 'Function not found'");
                 System.Diagnostics.Debug.WriteLine($"Map state after loading: {mapState}");
-                
+
                 if (mapState.Contains("\"markerCount\":0"))
                 {
                     System.Diagnostics.Debug.WriteLine("No markers found on map, testing with sample data...");
@@ -145,7 +170,7 @@ public partial class DashboardPage : ContentPage
         try
         {
             System.Diagnostics.Debug.WriteLine("Initializing WebView...");
-            
+
             // Set the HTML source with BaseUrl pointing to the app's resources
             var htmlSource = new HtmlWebViewSource
             {
@@ -157,12 +182,12 @@ public partial class DashboardPage : ContentPage
 
             // Load the raw index.html
             CourierMapWebView.Source = $"index.html"; // The WebView will resolve using BaseUrl
-            
+
             System.Diagnostics.Debug.WriteLine("WebView source set, waiting for navigation to complete...");
-            
+
             // Wait for the WebView to finish loading
             await WaitForWebViewToLoadAsync();
-            
+
             System.Diagnostics.Debug.WriteLine("WebView initialization completed");
         }
         catch (Exception ex)
@@ -179,24 +204,24 @@ public partial class DashboardPage : ContentPage
     {
         var maxAttempts = 10; // Reduce to 5 seconds max
         var attempt = 0;
-        
+
         System.Diagnostics.Debug.WriteLine("Starting WebView readiness checks...");
-        
+
         while (attempt < maxAttempts)
         {
             try
             {
                 System.Diagnostics.Debug.WriteLine($"WebView readiness attempt {attempt + 1}/{maxAttempts}");
-                
+
                 // Try to execute a simple JavaScript test with shorter timeout
                 var result = await CourierMapWebView.EvaluateJavaScriptAsync("'test'");
-                
+
                 System.Diagnostics.Debug.WriteLine($"JavaScript test result: '{result}'");
-                
+
                 if (!string.IsNullOrEmpty(result))
                 {
                     System.Diagnostics.Debug.WriteLine($"WebView ready after {attempt * 500}ms");
-                    
+
                     // Quick additional test for our functions - but don't wait too long
                     try
                     {
@@ -208,14 +233,14 @@ public partial class DashboardPage : ContentPage
                     {
                         System.Diagnostics.Debug.WriteLine("Function test failed, but proceeding anyway");
                     }
-                    
+
                     return;
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"WebView readiness attempt {attempt + 1} failed: {ex.Message}");
-                
+
                 // If we're past attempt 5, just proceed
                 if (attempt >= 5)
                 {
@@ -223,11 +248,11 @@ public partial class DashboardPage : ContentPage
                     break;
                 }
             }
-            
+
             attempt++;
             await Task.Delay(500); // Wait 500ms between attempts
         }
-        
+
         System.Diagnostics.Debug.WriteLine("WebView initialization timeout - proceeding anyway");
     }
 
@@ -240,7 +265,7 @@ public partial class DashboardPage : ContentPage
             {
                 return false; // Don't try to dispatch, just return false
             }
-            
+
             var result = await CourierMapWebView.EvaluateJavaScriptAsync("1+1");
             var isReady = !string.IsNullOrEmpty(result);
             System.Diagnostics.Debug.WriteLine($"WebView readiness check: {isReady} (result: '{result}')");
@@ -280,7 +305,7 @@ public partial class DashboardPage : ContentPage
         try
         {
             System.Diagnostics.Debug.WriteLine($"LITERAL REDRAW #{_mapRedrawCounter}: Starting map markers update");
-            
+
             if (CourierMapWebView?.Source == null || !_viewModel.IsMapView)
             {
                 System.Diagnostics.Debug.WriteLine($"LITERAL REDRAW #{_mapRedrawCounter}: WebView source is null or not in map view - SKIPPING");
@@ -321,7 +346,7 @@ public partial class DashboardPage : ContentPage
             System.Diagnostics.Debug.WriteLine($"Serialized JSON: {couriersJson}");
 
             var script = $"if (window.updateCourierMarkers) {{ window.updateCourierMarkers({couriersJson}); }} else {{ console.error('updateCourierMarkers function not found'); }}";
-            
+
             // Simple JavaScript execution
             try
             {
@@ -361,34 +386,34 @@ public partial class DashboardPage : ContentPage
         {
             var maxRetries = 5; // Reduced retries to prevent excessive updates
             var retryCount = 0;
-            
+
             System.Diagnostics.Debug.WriteLine("Starting periodic retry map update mechanism");
-            
+
             while (retryCount < maxRetries)
             {
                 await Task.Delay(5000); // Increased delay to 5 seconds
                 retryCount++;
-                
+
                 System.Diagnostics.Debug.WriteLine($"Periodic retry {retryCount}/{maxRetries} - checking if map needs update");
-                
+
                 if (!_viewModel.IsMapView)
                 {
                     System.Diagnostics.Debug.WriteLine("Not in map view, stopping periodic retries");
                     break;
                 }
-                
+
                 try
                 {
                     // Try to update markers regardless of readiness checks
                     System.Diagnostics.Debug.WriteLine($"Periodic retry {retryCount}: Attempting to update map with {_viewModel.FilteredDeliveryPersons.Count} couriers");
                     await UpdateMapMarkersAsync();
-                    
+
                     // Check if we succeeded
                     try
                     {
                         var mapState = await CourierMapWebView.EvaluateJavaScriptAsync("window.getMapState ? JSON.stringify(window.getMapState()) : 'Function not found'");
                         System.Diagnostics.Debug.WriteLine($"Periodic retry {retryCount}: Map state: {mapState}");
-                        
+
                         if (mapState.Contains("markerCount") && !mapState.Contains("\"markerCount\":0"))
                         {
                             System.Diagnostics.Debug.WriteLine($"Periodic retry {retryCount}: SUCCESS! Map has markers, stopping periodic retries");
@@ -405,7 +430,7 @@ public partial class DashboardPage : ContentPage
                     System.Diagnostics.Debug.WriteLine($"Periodic retry {retryCount} failed: {ex.Message}");
                 }
             }
-            
+
             System.Diagnostics.Debug.WriteLine("Periodic retry mechanism completed");
         }
         catch (Exception ex)
@@ -432,6 +457,87 @@ public partial class DashboardPage : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error testing map: {ex.Message}");
+        }
+    }
+
+    private async Task ExplicitlyUpdateMapWithFreshDatabaseDataAsync(IEnumerable<ManagementClient.Core.Common.Models.Courier> freshCouriersFromDb)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICITLY UPDATING MAP WITH FRESH DATABASE DATA");
+
+            if (CourierMapWebView?.Source == null || !_viewModel.IsMapView)
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: WebView source is null or not in map view - SKIPPING");
+                return;
+            }
+
+            // FORCE WebView readiness check
+            try
+            {
+                await CourierMapWebView.EvaluateJavaScriptAsync("'ready'");
+                System.Diagnostics.Debug.WriteLine("DashboardPage: WebView is ready - proceeding with EXPLICIT map update");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: WebView not ready yet: {ex.Message} - will still try to update");
+            }
+
+            // STEP 1: LITERALLY DELETE ALL OLD WAYPOINTS
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 1 - LITERALLY DELETING ALL OLD WAYPOINTS FROM MAP");
+            try
+            {
+                var clearScript = "if (window.clearAllCourierMarkers) { window.clearAllCourierMarkers(); } else if (window.updateCourierMarkers) { window.updateCourierMarkers([]); } else { console.error('No clear function found'); }";
+                var clearResult = await CourierMapWebView.EvaluateJavaScriptAsync(clearScript);
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: OLD WAYPOINTS DELETED - Result: {clearResult}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: Error deleting old waypoints: {ex.Message}");
+            }
+
+            // STEP 2: LITERALLY ADD ALL NEW WAYPOINTS FROM DATABASE
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 2 - LITERALLY ADDING ALL NEW WAYPOINTS FROM DATABASE");
+
+            var couriersList = freshCouriersFromDb.Select(c => new
+            {
+                c.Name,
+                c.Surname,
+                c.Phone,
+                c.Zipcode,
+                c.Latitude,
+                c.Longitude,
+                VehicleType = c.VehicleType,
+                IsAvailable = c.IsAvailable
+            }).ToList();
+
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: ADDING {couriersList.Count} NEW WAYPOINTS FROM DATABASE:");
+            foreach (var courier in couriersList)
+            {
+                System.Diagnostics.Debug.WriteLine($"  -> Adding waypoint: {courier.Name}, Lat: {courier.Latitude}, Lng: {courier.Longitude}, Vehicle: {courier.VehicleType}, Available: {courier.IsAvailable}");
+            }
+
+            var couriersJson = System.Text.Json.JsonSerializer.Serialize(couriersList);
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Serialized courier data: {couriersJson}");
+
+            var addScript = $"if (window.updateCourierMarkers) {{ window.updateCourierMarkers({couriersJson}); }} else {{ console.error('updateCourierMarkers function not found'); }}";
+
+            try
+            {
+                var addResult = await CourierMapWebView.EvaluateJavaScriptAsync(addScript);
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: NEW WAYPOINTS ADDED - JavaScript executed successfully: {addResult}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: Error adding new waypoints: {ex.Message}");
+            }
+
+            System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICIT MAP UPDATE COMPLETED - ALL OLD WAYPOINTS DELETED, ALL NEW WAYPOINTS ADDED FROM DATABASE");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in ExplicitlyUpdateMapWithFreshDatabaseDataAsync: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
         }
     }
 
@@ -466,7 +572,7 @@ public partial class DashboardPage : ContentPage
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
-        
+
         if (_courierService != null)
         {
             _courierService.CouriersChanged -= OnCourierServiceChanged;

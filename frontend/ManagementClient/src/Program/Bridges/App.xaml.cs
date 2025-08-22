@@ -13,7 +13,6 @@ public partial class App : Application
 	{
 		Env.Load();
 		InitializeComponent();
-		MainPage = new AppShell();
 
 		// try
 		// {
@@ -124,7 +123,7 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		var window = base.CreateWindow(activationState);
+		var window = new Window(new AppShell());
 
 		// Set window properties
 		window.Title = "Logistics Management System";

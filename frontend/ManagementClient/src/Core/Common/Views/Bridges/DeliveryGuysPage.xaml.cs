@@ -38,10 +38,18 @@ public partial class DeliveryGuysPage : ContentPage
     {
         base.OnAppearing();
         
-        // Load couriers when page appears
+        // Load couriers when page appears only if we don't have any data
         if (_viewModel != null)
         {
-            await _viewModel.LoadCouriersAsync();
+            if (_viewModel.Couriers.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("DeliveryGuysPage: No couriers in collection, loading from service");
+                await _viewModel.LoadCouriersAsync();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"DeliveryGuysPage: Using cached data - {_viewModel.Couriers.Count} couriers available");
+            }
         }
     }
 

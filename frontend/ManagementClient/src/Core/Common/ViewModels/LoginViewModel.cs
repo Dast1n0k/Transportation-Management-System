@@ -94,7 +94,7 @@ public class LoginViewModel : BaseViewModel
                 await _dialogService.ShowAlertAsync("Login Failed", errorMessage);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await _dialogService.ShowAlertAsync("Connection Error", "Unable to connect to server. Please try again.");
         }

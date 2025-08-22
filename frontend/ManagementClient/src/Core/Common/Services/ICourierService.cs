@@ -9,6 +9,7 @@ public interface ICourierService
 {
     event EventHandler CouriersChanged;
     void ClearCouriers();
+    bool HasCachedData();
     Task RefreshCouriersAsync();
     Task<Courier> RegisterCourierAsync(Courier courier);
     Courier? GetCourier(int id);

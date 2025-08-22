@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 
@@ -10,9 +11,10 @@ public class DialogService : IDialogService
     {
         try
         {
-            if (Application.Current?.MainPage != null)
+            var page = Application.Current?.Windows?.FirstOrDefault()?.Page;
+            if (page != null)
             {
-                return await Application.Current.MainPage.DisplayAlert(title, message, "Yes", "No");
+                return await page.DisplayAlert(title, message, "Yes", "No");
             }
             return false;
         }
@@ -27,9 +29,10 @@ public class DialogService : IDialogService
     {
         try
         {
-            if (Application.Current?.MainPage != null)
+            var page = Application.Current?.Windows?.FirstOrDefault()?.Page;
+            if (page != null)
             {
-                await Application.Current.MainPage.DisplayAlert(title, message, "OK");
+                await page.DisplayAlert(title, message, "OK");
             }
         }
         catch (Exception ex)

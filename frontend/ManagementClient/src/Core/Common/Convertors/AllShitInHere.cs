@@ -8,12 +8,12 @@ namespace ManagementClient.Core.Common.Converters;
 // Converter for Save button text
 public class SaveButtonTextConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return (bool)value ? "Update" : "Save";
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }
@@ -22,12 +22,12 @@ public class SaveButtonTextConverter : IValueConverter
 // Converter for inverted boolean (for password visibility)
 public class InvertedBoolConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return !(bool)value;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return !(bool)value;
     }
@@ -36,12 +36,12 @@ public class InvertedBoolConverter : IValueConverter
 // Converter for password visibility icon
 public class PasswordVisibilityConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return (bool)value ? "👁" : "👁‍🗨";
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }
@@ -50,13 +50,13 @@ public class PasswordVisibilityConverter : IValueConverter
 // Converter for view toggle button style
 public class ViewToggleStyleConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var isActive = (bool)value;
         return isActive ? "ActiveToggleButtonStyle" : "InactiveToggleButtonStyle";
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }
@@ -65,13 +65,13 @@ public class ViewToggleStyleConverter : IValueConverter
 // Converter for availability status to color
 public class AvailabilityToColorConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var isAvailable = (bool)value;
         return isAvailable ? Color.FromArgb("#28A745") : Color.FromArgb("#DC3545"); // Green for available, red for unavailable
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }
@@ -80,13 +80,13 @@ public class AvailabilityToColorConverter : IValueConverter
 // Converter for availability status to text
 public class AvailabilityToTextConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var isAvailable = (bool)value;
         return isAvailable ? "Available" : "Unavailable";
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }
@@ -95,12 +95,12 @@ public class AvailabilityToTextConverter : IValueConverter
 // Converter to check if string is not empty
 public class StringNotEmptyConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return !string.IsNullOrWhiteSpace(value?.ToString());
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }
@@ -109,7 +109,7 @@ public class StringNotEmptyConverter : IValueConverter
 // Converter for vehicle type to specific emoji
 public class VehicleTypeToEmojiConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var vehicleType = value?.ToString()?.ToLower();
         
@@ -122,7 +122,7 @@ public class VehicleTypeToEmojiConverter : IValueConverter
         };
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
     }

@@ -109,12 +109,16 @@ public class DashboardViewModel : BaseViewModel
 
     public async Task InitializeAsync()
     {
-        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync called");
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync called - FORCING DATABASE REFRESH");
+        
+        // ALWAYS force fresh data from database when initializing dashboard
+        await _courierService.RefreshCouriersAsync();
         await LoadDeliveryPersonsAsync();
-        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync completed");
+        
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync completed with fresh database data");
     }
 
-    private async Task LoadDeliveryPersonsAsync()
+    public async Task LoadDeliveryPersonsAsync()
     {
         System.Diagnostics.Debug.WriteLine("DashboardViewModel: LoadDeliveryPersonsAsync called");
         await ExecuteAsync(async () =>
@@ -206,23 +210,18 @@ public class DashboardViewModel : BaseViewModel
     {
         await ExecuteAsync(async () =>
         {
-            System.Diagnostics.Debug.WriteLine("DashboardViewModel: LITERAL REDRAW - Switching to map view, forcing fresh server fetch");
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Switching to map view - FORCING DATABASE REFRESH");
             
-            // LITERALLY fetch from server every single time
+            // ALWAYS fetch fresh data from database - no caching allowed
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: FORCING fresh server fetch for map view");
             await _courierService.RefreshCouriersAsync();
-            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Fresh data fetched from server");
-            
-            // LITERALLY reload collections from fresh server data
             await LoadDeliveryPersonsAsync();
-            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Collections reloaded with {FilteredDeliveryPersons.Count} couriers");
-            
-            // Set map view (this will trigger map redraw with completely fresh data)
-            IsMapView = true;
-            
-            // Reset the redraw flag
             _needsMapRedraw = false;
             
-            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Map view activated - LITERAL REDRAW with {FilteredDeliveryPersons.Count} fresh couriers");
+            // Set map view (this will trigger map redraw with fresh database data)
+            IsMapView = true;
+            
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Map view activated with {FilteredDeliveryPersons.Count} fresh couriers from database");
         });
     }
 
@@ -288,19 +287,26 @@ public class DashboardViewModel : BaseViewModel
 
     public async Task RefreshAsync()
     {
-        System.Diagnostics.Debug.WriteLine("DashboardViewModel: RefreshAsync called - forcing server fetch and complete refresh");
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: RefreshAsync called - FORCING DATABASE REFRESH AND MAP UPDATE");
         
-        // FORCE fresh data from server first
+        // FORCE fresh data from server first - ALWAYS
         await _courierService.RefreshCouriersAsync();
         System.Diagnostics.Debug.WriteLine("DashboardViewModel: Server refresh completed");
         
-        // Then reload local collections
+        // Then reload local collections with fresh data
         await LoadDeliveryPersonsAsync();
         
         // Always force collection notifications after refresh
         NotifyCollectionChanged();
         
-        System.Diagnostics.Debug.WriteLine("DashboardViewModel: RefreshAsync completed with forced notifications");
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: RefreshAsync completed with fresh database data and forced notifications");
+    }
+
+    // Method to force refresh on next map switch
+    public void MarkForRefresh()
+    {
+        _needsMapRedraw = true;
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: Marked for refresh on next map view");
     }
 
     // Method to manually trigger collection change notifications
