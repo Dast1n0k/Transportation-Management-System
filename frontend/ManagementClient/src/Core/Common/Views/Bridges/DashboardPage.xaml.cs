@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Reflection;
 using Microsoft.Maui.Storage;
 using Microsoft.Maui.Controls;
 using ManagementClient.Core.Common.ViewModels;
@@ -82,6 +81,12 @@ public partial class DashboardPage : ContentPage
                 _viewModel.FilteredDeliveryPersons.Add(courier);
             }
 
+            // Fit map to content only if there are couriers or a search location
+            if (_viewModel.FilteredDeliveryPersons.Any() || _viewModel.HasSearchLocation)
+            {
+                await FitMapToContentAsync();
+            }
+
             System.Diagnostics.Debug.WriteLine("DashboardPage: Database refresh and map update completed");
         }
         catch (Exception ex)
@@ -90,7 +95,7 @@ public partial class DashboardPage : ContentPage
         }
     }
 
-    private void OnViewModelPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         // LITERAL redraw every time user switches TO map view
         if (e.PropertyName == nameof(_viewModel.IsMapView) && _viewModel.IsMapView)
@@ -102,9 +107,29 @@ public partial class DashboardPage : ContentPage
                 await UpdateMapMarkersAsync();
             });
         }
+        // Update map radius when RadiusInMiles property changes
+        else if (e.PropertyName == nameof(_viewModel.RadiusInMiles) && _viewModel.IsMapView)
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Radius changed to {_viewModel.RadiusInMiles} - updating map radius");
+            Dispatcher.Dispatch(async () =>
+            {
+                await UpdateMapRadiusDisplayAsync();
+            });
+        }
+        // Handle geocoding results - create waypoint and show radius
+        else if (e.PropertyName == nameof(_viewModel.HasSearchLocation) && _viewModel.HasSearchLocation && _viewModel.IsMapView)
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Search location updated - Lat: {_viewModel.SearchLatitude}, Lng: {_viewModel.SearchLongitude}");
+            Dispatcher.Dispatch(async () =>
+            {
+                await CreateSearchWaypointAsync();
+                await UpdateMapRadiusDisplayAsync();
+                await FitMapToContentAsync(); // Fit map after setting search location
+            });
+        }
     }
 
-    private void OnCourierServiceChanged(object sender, EventArgs e)
+    private void OnCourierServiceChanged(object? sender, EventArgs e)
     {
         System.Diagnostics.Debug.WriteLine("DashboardPage: CourierService.CouriersChanged event triggered - EXPLICITLY PERFORMING DATABASE GET REQUEST");
         if (_viewModel.IsMapView)
@@ -378,8 +403,6 @@ public partial class DashboardPage : ContentPage
         }
     }
 
-
-
     private async Task PeriodicRetryMapUpdate()
     {
         try
@@ -532,12 +555,73 @@ public partial class DashboardPage : ContentPage
                 System.Diagnostics.Debug.WriteLine($"DashboardPage: Error adding new waypoints: {ex.Message}");
             }
 
-            System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICIT MAP UPDATE COMPLETED - ALL OLD WAYPOINTS DELETED, ALL NEW WAYPOINTS ADDED FROM DATABASE");
+            // STEP 3: UPDATE MAP RADIUS DISPLAY
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 3 - UPDATING MAP RADIUS DISPLAY");
+            await UpdateMapRadiusDisplayAsync();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error in ExplicitlyUpdateMapWithFreshDatabaseDataAsync: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async Task CreateSearchWaypointAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: CreateSearchWaypointAsync called - Lat: {_viewModel.SearchLatitude}, Lng: {_viewModel.SearchLongitude}");
+
+            if (!await IsWebViewReadyAsync())
+            {
+                System.Diagnostics.Debug.WriteLine("CreateSearchWaypointAsync: WebView not ready");
+                return;
+            }
+
+            var script = $"if (window.addSearchWaypoint) {{ window.addSearchWaypoint({_viewModel.SearchLatitude}, {_viewModel.SearchLongitude}, '{_viewModel.ZipCode}'); }} else {{ console.error('addSearchWaypoint function not found'); }}";
+
+            var result = await CourierMapWebView.EvaluateJavaScriptAsync(script);
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Search waypoint created - Result: {result}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error creating search waypoint: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateMapRadiusDisplayAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: UpdateMapRadiusDisplayAsync called with radius {_viewModel.RadiusInMiles}");
+
+            if (!await IsWebViewReadyAsync())
+            {
+                System.Diagnostics.Debug.WriteLine("UpdateMapRadiusDisplayAsync: WebView not ready");
+                return;
+            }
+
+            if (!_viewModel.HasSearchLocation)
+            {
+                System.Diagnostics.Debug.WriteLine("No search location - skipping radius display update");
+                return;
+            }
+
+            var centerLat = _viewModel.SearchLatitude;
+            var centerLng = _viewModel.SearchLongitude;
+
+            // Convert miles to meters for map display (1 mile = 1609.34 meters)
+            var radiusInMeters = _viewModel.RadiusInMiles * 1609.34;
+
+            // Move the map center when updating radius
+            var script = $"if (window.updateMapRadius) {{ window.updateMapRadius({centerLat}, {centerLng}, {radiusInMeters}, {_viewModel.RadiusInMiles}, true); }} else if (window.addSearchRadius) {{ window.addSearchRadius({centerLat}, {centerLng}, {radiusInMeters}, '{_viewModel.ZipCode}', true); }} else {{ console.error('No radius update function found'); }}";
+
+            var result = await CourierMapWebView.EvaluateJavaScriptAsync(script);
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Map radius updated - Result: {result}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating map radius display: {ex.Message}");
         }
     }
 
@@ -551,16 +635,71 @@ public partial class DashboardPage : ContentPage
                 return;
             }
 
-            // Use default coordinates for demo (you can implement geocoding later)
-            var centerLat = 40.7128;
-            var centerLng = -74.0060;
+            if (!_viewModel.HasSearchLocation)
+            {
+                System.Diagnostics.Debug.WriteLine("No search location - skipping search radius update");
+                return;
+            }
 
-            var script = $"if (window.addSearchRadius) {{ window.addSearchRadius({centerLat}, {centerLng}, {_viewModel.RadiusInMiles}, '{_viewModel.ZipCode}'); }}";
+            var centerLat = _viewModel.SearchLatitude;
+            var centerLng = _viewModel.SearchLongitude;
+
+            // Convert miles to meters for map display (1 mile = 1609.34 meters)
+            var radiusInMeters = _viewModel.RadiusInMiles * 1609.34;
+
+            // Move the map center when updating search radius
+            var script = $"if (window.addSearchRadius) {{ window.addSearchRadius({centerLat}, {centerLng}, {radiusInMeters}, '{_viewModel.ZipCode}', true); }}";
             await CourierMapWebView.EvaluateJavaScriptAsync(script);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error updating search radius: {ex.Message}");
+        }
+    }
+
+    private async Task FitMapToContentAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardPage: Fitting map to content");
+
+            if (!await IsWebViewReadyAsync())
+            {
+                System.Diagnostics.Debug.WriteLine("FitMapToContentAsync: WebView not ready");
+                return;
+            }
+
+            string script;
+
+            if (_viewModel.HasSearchLocation)
+            {
+                var centerLat = _viewModel.SearchLatitude;
+                var centerLng = _viewModel.SearchLongitude;
+                var zoom = 10; // Fixed zoom for search location
+                script = $"if (window.map) {{ window.map.setView([{centerLat}, {centerLng}], {zoom}); }} else {{ console.error('Map not found'); }}";
+            }
+            else if (_viewModel.FilteredDeliveryPersons.Any())
+            {
+                var persons = _viewModel.FilteredDeliveryPersons;
+                var minLat = persons.Min(c => c.Latitude);
+                var maxLat = persons.Max(c => c.Latitude);
+                var minLng = persons.Min(c => c.Longitude);
+                var maxLng = persons.Max(c => c.Longitude);
+                script = $"if (window.map) {{ window.map.fitBounds([[{minLat}, {minLng}], [{maxLat}, {maxLng}]]); }} else {{ console.error('Map not found'); }}";
+            }
+            else
+            {
+                // Skip setting view if no data is available to prevent zooming out
+                System.Diagnostics.Debug.WriteLine("FitMapToContentAsync: No couriers or search location, skipping map view adjustment");
+                return;
+            }
+
+            var result = await CourierMapWebView.EvaluateJavaScriptAsync(script);
+            System.Diagnostics.Debug.WriteLine($"FitMapToContentAsync executed - Result: {result}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in FitMapToContentAsync: {ex.Message}");
         }
     }
 

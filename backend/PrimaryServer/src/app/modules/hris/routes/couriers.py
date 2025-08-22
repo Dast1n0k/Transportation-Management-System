@@ -18,6 +18,7 @@ from app.modules.hris.utils.formatters import (
     format_search_response
 )
 from app.modules.hris.constants import CourierErrorCodes
+from app.modules.map.services import ZipCodeService
 
 couriers_routes = Blueprint("couriers_routes", __name__)
 
@@ -54,6 +55,7 @@ def create_courier():
         'courier': format_courier_response(courier)
     }), 201
 
+
 @couriers_routes.route("/couriers", methods=["GET"])
 # @token_required
 # @manager_or_admin_required
@@ -67,32 +69,6 @@ def get_couriers():
     response['message'] = f'Returning all {total} couriers'
 
     return jsonify(response), 200
-
-
-# @couriers_routes.route("/couriers/<int:courier_id>", methods=["GET"])
-# # @token_required
-# def get_courier(courier_id):
-#     courier = get_courier_by_id(courier_id)
-
-#     if not courier:
-#         return jsonify({
-#             'error': 'Courier not found',
-#             'code': CourierErrorCodes.COURIER_NOT_FOUND
-#         }), 404
-
-#     courier['user_id'] != current_user['id']
-
-#     # Check access rights
-#     # Admins and managers can see all, regular users can only see their own profile
-#     # if (current_user['role'] not in ['admin', 'manager'] and
-#     #     return jsonify({
-#     #         'error': 'Access denied',
-#     #         'code': CourierErrorCodes.ACCESS_DENIED
-#     #     }), 403
-
-#     return jsonify({
-#         'courier': format_courier_response(courier)
-#     }), 200
 
 
 @couriers_routes.route("/couriers/my-profile", methods=["GET"])
@@ -208,6 +184,96 @@ def search_couriers_endpoint():
 
     response = format_search_response(couriers, search_params)
     return jsonify(response), 200
+
+
+@couriers_routes.route("/couriers/search-by-zipcode", methods=["POST"])
+# @token_required
+def search_couriers_by_zipcode():
+    """Search couriers by zipcode and radius - geocodes zipcode and returns nearby couriers"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON data required'}), 400
+
+    zipcode = data.get('zipcode')
+    radius = data.get('radius', 10)  # Default 10 miles
+
+    if not zipcode:
+        return jsonify({
+            'error': 'zipcode is required',
+            'code': CourierErrorCodes.VALIDATION_ERROR
+        }), 400
+
+    try:
+        radius = float(radius)
+        if radius <= 0 or radius > 500:  # Reasonable limits
+            return jsonify({
+                'error': 'radius must be between 1 and 500 miles',
+                'code': CourierErrorCodes.VALIDATION_ERROR
+            }), 400
+    except (ValueError, TypeError):
+        return jsonify({
+            'error': 'Invalid radius value',
+            'code': CourierErrorCodes.VALIDATION_ERROR
+        }), 400
+
+    try:
+        # Initialize geocoding service
+        zip_service = ZipCodeService()
+
+        # Geocode the zipcode to get lat/lng
+        zipcode_info = zip_service.get_zipcode_info(zipcode.strip())
+
+        if not zipcode_info.lat or not zipcode_info.lon:
+            return jsonify({
+                'error': 'Could not geocode the provided zipcode',
+                'code': CourierErrorCodes.VALIDATION_ERROR,
+                'zipcode': zipcode
+            }), 400
+
+        # Search for couriers within the radius
+        search_params = {
+            'center_lat': zipcode_info.lat,
+            'center_lng': zipcode_info.lon,
+            'radius': radius,
+            'sort_by': 'distance'
+        }
+
+        # Add optional filters if provided
+        if data.get('vehicle_type'):
+            search_params['vehicle_type'] = data.get('vehicle_type')
+
+        if data.get('available_only', True):  # Default to available only
+            search_params['is_available'] = True
+
+        couriers, error = search_couriers(search_params)
+
+        if error:
+            return jsonify(error), 400
+
+        # Format response with geocoding information
+        response = format_search_response(couriers, search_params)
+        response['geocoding'] = {
+            'zipcode': zipcode,
+            'city': zipcode_info.city,
+            'state': zipcode_info.state,
+            'county': zipcode_info.county_name,
+            'coordinates': {
+                'lat': zipcode_info.lat,
+                'lng': zipcode_info.lon
+            }
+        }
+        response['search_radius_miles'] = radius
+        response['total_found'] = len(couriers)
+        response['message'] = f'Found {len(couriers)} couriers within {radius} miles of {zipcode}'
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({
+            'error': f'Geocoding service error: {str(e)}',
+            'code': 'GEOCODING_ERROR',
+            'zipcode': zipcode
+        }), 500
 
 
 @couriers_routes.route("/couriers/<int:courier_id>/availability", methods=["PUT"])

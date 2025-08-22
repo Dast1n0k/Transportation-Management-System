@@ -98,6 +98,7 @@ public class Courier : INotifyPropertyChanged
             {
                 _vehicleType = value ?? "sprinter";
                 OnPropertyChanged(nameof(VehicleType));
+                OnPropertyChanged(nameof(VehicleIcon));
             }
         }
     }
@@ -164,6 +165,8 @@ public class Courier : INotifyPropertyChanged
             {
                 _isAvailable = value;
                 OnPropertyChanged(nameof(IsAvailable));
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(StatusColor));
             }
         }
     }
@@ -194,6 +197,26 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    // Computed properties for UI binding
+    public string StatusText => IsAvailable ? "Available" : "Unavailable";
+    
+    public string StatusColor => IsAvailable ? "#4CAF50" : "#F44336"; // Green for available, red for unavailable
+    
+    public string VehicleIcon
+    {
+        get
+        {
+            return VehicleType?.ToLower() switch
+            {
+                "truck" => "🚛",
+                "van" => "🚐",
+                "car" => "🚗",
+                "bike" => "🚴",
+                "motorcycle" => "🏍️",
+                _ => "🚚" // Default sprinter/delivery van
+            };
+        }
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

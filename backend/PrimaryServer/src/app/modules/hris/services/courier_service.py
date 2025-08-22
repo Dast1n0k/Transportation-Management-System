@@ -276,13 +276,19 @@ def search_couriers(search_params):
         else:
             query_parts.append("ORDER BY cp.created_at DESC")
 
-        # Limit and offset
-        limit = min(int(search_params.get(
-            'limit', SearchSettings.DEFAULT_LIMIT)), SearchSettings.MAX_LIMIT)
-        offset = int(search_params.get('offset', 0))
-
-        query_parts.append("LIMIT ? OFFSET ?")
-        params.extend([limit, offset])
+        # Limit and offset (only if specified)
+        limit = search_params.get('limit')
+        offset = search_params.get('offset', 0)
+        
+        if limit is not None:
+            limit = min(int(limit), SearchSettings.MAX_LIMIT)
+            query_parts.append("LIMIT ? OFFSET ?")
+            params.extend([limit, int(offset)])
+        elif offset > 0:
+            # If offset is specified without limit, use default limit
+            limit = SearchSettings.DEFAULT_LIMIT
+            query_parts.append("LIMIT ? OFFSET ?")
+            params.extend([limit, int(offset)])
 
         # Execute query
         cur = conn.execute(' '.join(query_parts), params)
