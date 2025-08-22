@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Input;
 using System.Threading.Tasks;
 using ManagementClient.Core.Common.Models;
@@ -7,31 +8,31 @@ namespace ManagementClient.Core.Common.ViewModels;
 
 public class LoginViewModel : BaseViewModel
 {
-    private readonly IAuthenticationService _authService;
+    private readonly IAuthService _authService;
     private readonly INavigationService _navigationService;
-    private string _email = string.Empty;
+    private readonly IDialogService _dialogService;
+    private string _username = string.Empty;
     private string _password = string.Empty;
-    private string _errorMessage = string.Empty;
     private bool _isPasswordVisible;
 
-    public LoginViewModel(IAuthenticationService authService, INavigationService navigationService)
+    public LoginViewModel(IAuthService authService, INavigationService navigationService, IDialogService dialogService)
     {
         _authService = authService;
         _navigationService = navigationService;
+        _dialogService = dialogService;
         Title = "Logistics Operator Login";
 
         LoginCommand = new AsyncRelayCommand(LoginAsync, CanLogin);
         TogglePasswordVisibilityCommand = new RelayCommand(TogglePasswordVisibility);
     }
 
-    public string Email
+    public string Username
     {
-        get => _email;
+        get => _username;
         set
         {
-            if (SetProperty(ref _email, value))
+            if (SetProperty(ref _username, value))
             {
-                ErrorMessage = string.Empty;
                 ((AsyncRelayCommand)LoginCommand).RaiseCanExecuteChanged();
             }
         }
@@ -44,16 +45,9 @@ public class LoginViewModel : BaseViewModel
         {
             if (SetProperty(ref _password, value))
             {
-                ErrorMessage = string.Empty;
                 ((AsyncRelayCommand)LoginCommand).RaiseCanExecuteChanged();
             }
         }
-    }
-
-    public string ErrorMessage
-    {
-        get => _errorMessage;
-        set => SetProperty(ref _errorMessage, value);
     }
 
     public bool IsPasswordVisible
@@ -62,41 +56,54 @@ public class LoginViewModel : BaseViewModel
         set => SetProperty(ref _isPasswordVisible, value);
     }
 
-    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
-
     public ICommand LoginCommand { get; }
     public ICommand TogglePasswordVisibilityCommand { get; }
 
     private bool CanLogin()
     {
-        return !string.IsNullOrWhiteSpace(Email) &&
+        return !string.IsNullOrWhiteSpace(Username) &&
                !string.IsNullOrWhiteSpace(Password) &&
                !IsBusy;
     }
 
     private async Task LoginAsync()
     {
-        await ExecuteAsync(async () =>
+        try
         {
+            IsBusy = true;
+
             var request = new LoginRequest
             {
-                Email = Email.Trim(),
-                Password = Password
+                Username = Username.Trim(),
+                Password = Password.Trim()
             };
 
             var response = await _authService.LoginAsync(request);
 
-            if (response.IsSuccess)
+            if (response?.IsSuccess == true)
             {
-                ErrorMessage = string.Empty;
-                await _navigationService.NavigateToAsync("//main");
+                await _navigationService.NavigateToAsync("//dashboard");
             }
             else
             {
-                ErrorMessage = response.Message;
-                OnPropertyChanged(nameof(HasError));
+                // Use DisplayAlert for login failures
+                var errorMessage = !string.IsNullOrEmpty(response?.Message) 
+                    ? response.Message 
+                    : "Invalid username or password";
+                    
+                await _dialogService.ShowAlertAsync("Login Failed", errorMessage);
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync("Connection Error", "Unable to connect to server. Please try again.");
+        }
+        finally
+        {
+            IsBusy = false;
+            // Ensure the command can execute again after error
+            ((AsyncRelayCommand)LoginCommand).RaiseCanExecuteChanged();
+        }
     }
 
     private void TogglePasswordVisibility()

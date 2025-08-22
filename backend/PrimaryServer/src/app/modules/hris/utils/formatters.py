@@ -193,18 +193,6 @@ def format_distance_miles(distance_miles):
     else:
         return f"{int(distance_miles)}mi"
 
-
-def clean_phone_number(phone):
-    """Cleans phone number from extra characters"""
-    if not phone:
-        return None
-
-    # Remove all non-digit characters except +
-    import re
-    cleaned = re.sub(r'[^\d+]', '', str(phone))
-    return cleaned if cleaned else None
-
-
 def format_capacity(capacity):
     """Formats capacity for US market (pounds and tons)"""
     if not capacity:

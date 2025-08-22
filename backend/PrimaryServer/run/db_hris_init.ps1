@@ -1,5 +1,5 @@
-$DBPath = "..\dbs\employees.db"
-$SQLPath = "..\sql\schema_employees.sql"
+$DBPath = "..\dbs\hris.db"
+$SQLPath = "..\sql\schema_hris.sql"
 
 if (-not (Test-Path -Path (Split-Path $DBPath))) {
     New-Item -ItemType Directory -Path (Split-Path $DBPath)

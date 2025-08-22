@@ -61,22 +61,16 @@ CREATE INDEX idx_manager_user_id ON manager_profiles (user_id);
 
 CREATE TABLE courier_profiles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL UNIQUE,
+    user_id INTEGER,
     name TEXT,
     surname TEXT,
-    phone TEXT UNIQUE NOT NULL CHECK (
-        phone GLOB '+[0-9]*'
-    ),
-    dimensions TEXT NOT NULL CHECK (
-        dimensions GLOB '[0-9]*\*[0-9]*\*[0-9]*'
-    ),
-    vehicle_type TEXT NOT NULL CHECK (
-        vehicle_type IN ('sprinter', 'straight_small', 'straight_large')
-    ),
+    phone TEXT UNIQUE,  -- Remove CHECK constraint, add UNIQUE
+    dimensions TEXT,     -- Remove CHECK constraint
+    vehicle_type TEXT,
     zipcode TEXT NOT NULL,
     latitude REAL NOT NULL,
     longitude REAL NOT NULL,
-    capacity INTEGER NOT NULL,
+    capacity TEXT,
     available_since TIMESTAMP,
     is_available BOOLEAN DEFAULT 0,
     notes TEXT,

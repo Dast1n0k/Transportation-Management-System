@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 
@@ -7,18 +8,33 @@ public class DialogService : IDialogService
 {
     public async Task<bool> ShowConfirmationAsync(string title, string message)
     {
-        return true;
-        // return await Application.Current?.MainPage?.DisplayAlert(title, message, "Yes", "No") ?? false;
+        try
+        {
+            if (Application.Current?.MainPage != null)
+            {
+                return await Application.Current.MainPage.DisplayAlert(title, message, "Yes", "No");
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Dialog error: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task ShowAlertAsync(string title, string message)
     {
-        // await (Application.Current?.MainPage?.DisplayAlert(title, message, "OK") ?? Task.CompletedTask);
-    }
-
-    public async Task<string?> ShowInputAsync(string title, string message, string placeholder = "")
-    {
-        return null;
-        // return await Application.Current?.MainPage?.DisplayPromptAsync(title, message, placeholder: placeholder);
+        try
+        {
+            if (Application.Current?.MainPage != null)
+            {
+                await Application.Current.MainPage.DisplayAlert(title, message, "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Alert error: {ex.Message}");
+        }
     }
 }

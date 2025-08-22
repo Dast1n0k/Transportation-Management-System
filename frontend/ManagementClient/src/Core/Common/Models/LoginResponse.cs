@@ -1,9 +1,14 @@
+using System;
+using Windows.System;
+
 namespace ManagementClient.Core.Common.Models;
 
 public class LoginResponse
 {
-    public bool IsSuccess { get; set; }
-    public string Token { get; set; } = string.Empty;
+    public UserProfile? User { get; set; }
+
     public string Message { get; set; } = string.Empty;
-    public UserInfo? UserInfo { get; set; }
+
+    public bool IsSuccess => User != null && !string.IsNullOrEmpty(Message) &&
+                       Message.Contains("successful", StringComparison.OrdinalIgnoreCase);
 }

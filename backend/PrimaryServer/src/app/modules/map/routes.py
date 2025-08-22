@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
 from .services import ZipCodeService
 
-zipcode_bp = Blueprint('zipcode', __name__, url_prefix='/api/zipcode')
+zipcode_bp = Blueprint('zipcode', __name__)
 zip_service = ZipCodeService()
 
 
-@zipcode_bp.route('/<zipcode>', methods=['GET'])
+@zipcode_bp.route('/zipcode/<zipcode>', methods=['GET'])
 def get_zipcode(zipcode):
     """Получение информации о ZIP-коде"""
     try:

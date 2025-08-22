@@ -3,9 +3,9 @@ using ManagementClient.Core.Common.ViewModels;
 
 namespace ManagementClient.Core.Common.Views.Bridges;
 
-public partial class DeliveryPersonModalPage : ContentPage
+public partial class CourierModalPage : ContentPage
 {
-    public DeliveryPersonModalPage(DeliveryPersonModalViewModel viewModel)
+    public CourierModalPage(CourierModalViewModel viewModel)
     {
         InitializeComponent();
         BindingContext = viewModel;

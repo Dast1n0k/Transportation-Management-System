@@ -1,10 +1,8 @@
 import sqlite3
 import math
 from datetime import datetime
-from app.modules.auth.core.db import get_db
-from app.modules.hris.utils.validators import validate_courier_data, validate_search_params
+from app.modules.hris.core.db import get_db
 from app.modules.hris.utils.formatters import (
-    clean_phone_number,
     format_capacity,
     calculate_distance_miles  # Changed to miles
 )
@@ -17,75 +15,34 @@ from app.modules.hris.constants import (
 
 def create_courier_profile(user_id, courier_data):
     """Creates courier profile"""
-    # Data validation
-    validation_error = validate_courier_data(courier_data)
-    if validation_error:
-        return None, validation_error
-
-    # Clean and format data
-    phone = clean_phone_number(courier_data.get('phone'))
-    capacity = format_capacity(courier_data.get('capacity'))
-
     with get_db() as conn:
-        # Check that user doesn't already have courier profile
-        cur = conn.execute(
-            "SELECT id FROM courier_profiles WHERE user_id = ?", (user_id,))
-        if cur.fetchone():
-            return None, {
-                'error': 'User already has a courier profile',
-                'code': CourierErrorCodes.USER_ALREADY_HAS_COURIER_PROFILE
-            }
+        # Create courier profile
+        cur = conn.execute("""
+            INSERT INTO courier_profiles (
+                user_id, name, surname, phone, vehicle_type, dimensions, capacity,
+                zipcode, latitude, longitude, is_available, available_since, notes, location
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id,  # Add user_id as first parameter
+            courier_data.get('name', '').strip() or None,
+            courier_data.get('surname', '').strip() or None,
+            courier_data.get('phone', '').strip() or None,
+            courier_data.get('vehicle_type'),
+            courier_data.get('dimensions', '').strip() or None,
+            courier_data.get('capacity', '').strip() or None,
+            courier_data.get('zipcode'),
+            courier_data.get('latitude'),
+            courier_data.get('longitude'),
+            courier_data.get('is_available', False),
+            datetime.utcnow() if courier_data.get('is_available') else None,
+            courier_data.get('notes', '').strip() or None,
+            courier_data.get('location', '').strip() or None
+        ))
 
-        # Check phone uniqueness
-        if phone:
-            cur = conn.execute(
-                "SELECT id FROM courier_profiles WHERE phone = ?", (phone,))
-            if cur.fetchone():
-                return None, {
-                    'error': 'Phone number already exists',
-                    'code': CourierErrorCodes.PHONE_ALREADY_EXISTS
-                }
+        courier_id = cur.lastrowid
+        conn.commit()
 
-        try:
-            # Create courier profile
-            cur = conn.execute("""
-                INSERT INTO courier_profiles (
-                    user_id, name, surname, phone, vehicle_type, dimensions, capacity,
-                    zipcode, latitude, longitude, is_available, available_since, notes, location
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                user_id,
-                courier_data.get('name', '').strip() or None,
-                courier_data.get('surname', '').strip() or None,
-                phone,
-                courier_data.get('vehicle_type'),
-                courier_data.get('dimensions', '').strip() or None,
-                capacity,
-                courier_data.get('zipcode'),
-                courier_data.get('latitude'),
-                courier_data.get('longitude'),
-                courier_data.get('is_available', False),
-                datetime.utcnow() if courier_data.get('is_available') else None,
-                courier_data.get('notes', '').strip() or None,
-                courier_data.get('location', '').strip() or None
-            ))
-
-            courier_id = cur.lastrowid
-            conn.commit()
-
-            # Return created profile
-            return get_courier_by_id(courier_id), None
-
-        except sqlite3.IntegrityError as e:
-            if 'phone' in str(e).lower():
-                return None, {
-                    'error': 'Phone number already exists',
-                    'code': CourierErrorCodes.PHONE_ALREADY_EXISTS
-                }
-            return None, {
-                'error': 'Database constraint violation',
-                'code': CourierErrorCodes.VALIDATION_ERROR
-            }
+        return get_courier_by_id(courier_id), None
 
 
 def get_all_couriers(limit=None, offset=None):
@@ -144,127 +101,93 @@ def get_courier_by_user_id(user_id):
         return dict(courier) if courier else None
 
 
-def update_courier_profile(courier_id, courier_data, current_user):
+def safe_strip(value):
+    if isinstance(value, str):
+        value = value.strip()
+        return value or None  # return None if empty string
+    return value  # keep None or non-string as-is
+
+def update_courier_profile(courier_id, courier_data):
     """Updates courier profile - Now allows managers to update any courier"""
     # Get existing profile
     existing_courier = get_courier_by_id(courier_id)
-    if not existing_courier:
-        return None, {
-            'error': 'Courier not found',
-            'code': CourierErrorCodes.COURIER_NOT_FOUND
-        }
+    # if not existing_courier:
+    #     return None, {
+    #         'error': 'Courier not found',
+    #         'code': CourierErrorCodes.COURIER_NOT_FOUND
+    #     }
 
     # Check access rights - Now allows managers
-    if not can_modify_courier(existing_courier, current_user):
-        return None, {
-            'error': 'Cannot modify other courier profile',
-            'code': CourierErrorCodes.CANNOT_MODIFY_OTHER_COURIER
-        }
-
-    # Data validation
-    validation_error = validate_courier_data(courier_data)
-    if validation_error:
-        return None, validation_error
-
-    # Clean and format data
-    phone = clean_phone_number(courier_data.get('phone'))
-    capacity = format_capacity(courier_data.get('capacity'))
+    # if not can_modify_courier(existing_courier, current_user):
+    #     return None, {
+    #         'error': 'Cannot modify other courier profile',
+    #         'code': CourierErrorCodes.CANNOT_MODIFY_OTHER_COURIER
+    #     }
 
     with get_db() as conn:
-        # Check phone uniqueness (if changed)
-        if phone and phone != existing_courier.get('phone'):
-            cur = conn.execute(
-                "SELECT id FROM courier_profiles WHERE phone = ? AND id != ?",
-                (phone, courier_id)
-            )
-            if cur.fetchone():
-                return None, {
-                    'error': 'Phone number already exists',
-                    'code': CourierErrorCodes.PHONE_ALREADY_EXISTS
-                }
+        update_fields = []
+        update_values = []
 
-        try:
-            # Prepare update data
-            update_fields = []
-            update_values = []
+        fields_to_update = [
+            ('name', safe_strip(courier_data.get('name'))),
+            ('surname', safe_strip(courier_data.get('surname'))),
+            ('phone', safe_strip(courier_data.get('phone'))),
+            ('vehicle_type', courier_data.get('vehicle_type')),
+            ('dimensions', safe_strip(courier_data.get('dimensions'))),
+            ('capacity', safe_strip(courier_data.get('capacity'))),
+            ('zipcode', courier_data.get('zipcode')),
+            ('latitude', courier_data.get('latitude')),
+            ('longitude', courier_data.get('longitude')),
+            ('notes', safe_strip(courier_data.get('notes'))),
+            ('location', safe_strip(courier_data.get('location')))
+        ]
 
-            fields_to_update = [
-                ('name', courier_data.get('name', '').strip() or None),
-                ('surname', courier_data.get('surname', '').strip() or None),
-                ('phone', phone),
-                ('vehicle_type', courier_data.get('vehicle_type')),
-                ('dimensions', courier_data.get('dimensions', '').strip() or None),
-                ('capacity', capacity),
-                ('zipcode', courier_data.get('zipcode')),
-                ('latitude', courier_data.get('latitude')),
-                ('longitude', courier_data.get('longitude')),
-                ('notes', courier_data.get('notes', '').strip() or None),
-                ('location', courier_data.get('location', '').strip() or None)
-            ]
+        for field, value in fields_to_update:
+            if field in courier_data:  # Only update passed fields
+                update_fields.append(f"{field} = ?")
+                update_values.append(value)
 
-            for field, value in fields_to_update:
-                if field in courier_data:  # Only update passed fields
-                    update_fields.append(f"{field} = ?")
-                    update_values.append(value)
+        # Handle availability
+        if 'is_available' in courier_data:
+            is_available = courier_data.get('is_available', False)
+            update_fields.append("is_available = ?")
+            update_values.append(is_available)
 
-            # Handle availability
-            if 'is_available' in courier_data:
-                is_available = courier_data.get('is_available', False)
-                update_fields.append("is_available = ?")
-                update_values.append(is_available)
+            if is_available and not existing_courier.get('is_available'):
+                # Courier becomes available
+                update_fields.append("available_since = ?")
+                update_values.append(datetime.utcnow())
+            elif not is_available:
+                # Courier becomes unavailable
+                update_fields.append("available_since = ?")
+                update_values.append(None)
 
-                if is_available and not existing_courier.get('is_available'):
-                    # Courier becomes available
-                    update_fields.append("available_since = ?")
-                    update_values.append(datetime.utcnow())
-                elif not is_available:
-                    # Courier becomes unavailable
-                    update_fields.append("available_since = ?")
-                    update_values.append(None)
+        if not update_fields:
+            return existing_courier, None
 
-            if not update_fields:
-                return existing_courier, None
+        # Execute update
+        update_values.append(courier_id)
+        conn.execute(f"""
+            UPDATE courier_profiles
+            SET {', '.join(update_fields)}
+            WHERE id = ?
+        """, update_values)
 
-            # Execute update
-            update_values.append(courier_id)
-            conn.execute(f"""
-                UPDATE courier_profiles
-                SET {', '.join(update_fields)}
-                WHERE id = ?
-            """, update_values)
+        conn.commit()
 
-            conn.commit()
-
-            # Return updated profile
-            return get_courier_by_id(courier_id), None
-
-        except sqlite3.IntegrityError as e:
-            if 'phone' in str(e).lower():
-                return None, {
-                    'error': 'Phone number already exists',
-                    'code': CourierErrorCodes.PHONE_ALREADY_EXISTS
-                }
-            return None, {
-                'error': 'Database constraint violation',
-                'code': CourierErrorCodes.VALIDATION_ERROR
-            }
+        # Return updated profile
+        return get_courier_by_id(courier_id), None
 
 
-def delete_courier_profile(courier_id, current_user):
+def delete_courier_profile(courier_id):
     """Deletes courier profile - Now allows managers to delete"""
     # Get existing profile
     existing_courier = get_courier_by_id(courier_id)
+
     if not existing_courier:
         return None, {
             'error': 'Courier not found',
             'code': CourierErrorCodes.COURIER_NOT_FOUND
-        }
-
-    # Check access rights - Now allows managers
-    if not can_delete_courier(existing_courier, current_user):
-        return None, {
-            'error': 'Access denied',
-            'code': CourierErrorCodes.ACCESS_DENIED
         }
 
     with get_db() as conn:
@@ -277,10 +200,6 @@ def delete_courier_profile(courier_id, current_user):
 
 def search_couriers(search_params):
     """Search couriers by various criteria (now using miles)"""
-    # Validate search parameters
-    validation_error = validate_search_params(search_params)
-    if validation_error:
-        return None, validation_error
 
     with get_db() as conn:
         query_parts = ["""
@@ -421,47 +340,6 @@ def update_courier_availability(courier_id, is_available, current_user):
         conn.commit()
 
     return get_courier_by_id(courier_id), None
-
-
-def get_courier_statistics():
-    """Gets courier statistics"""
-    with get_db() as conn:
-        stats = {}
-
-        # Total couriers
-        cur = conn.execute("SELECT COUNT(*) as total FROM courier_profiles")
-        stats['total_couriers'] = cur.fetchone()['total']
-
-        # By availability
-        cur = conn.execute("""
-            SELECT is_available, COUNT(*) as count
-            FROM courier_profiles
-            GROUP BY is_available
-        """)
-        availability_stats = {row['is_available']                              : row['count'] for row in cur.fetchall()}
-        stats['by_availability'] = {
-            'available': availability_stats.get(1, 0),
-            'unavailable': availability_stats.get(0, 0)
-        }
-
-        # By vehicle types
-        cur = conn.execute("""
-            SELECT vehicle_type, COUNT(*) as count
-            FROM courier_profiles
-            GROUP BY vehicle_type
-        """)
-        stats['by_vehicle_type'] = {
-            row['vehicle_type']: row['count'] for row in cur.fetchall()}
-
-        # Couriers added in last 7 days
-        cur = conn.execute("""
-            SELECT COUNT(*) as count
-            FROM courier_profiles
-            WHERE created_at >= datetime('now', '-7 days')
-        """)
-        stats['new_couriers_week'] = cur.fetchone()['count']
-
-        return stats
 
 
 def can_modify_courier(courier_data, current_user):

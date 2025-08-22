@@ -5,7 +5,7 @@ from .routes.profile import profile_routes
 
 def create_auth_blueprint():
     """Создает и настраивает blueprint для auth модуля"""
-    auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+    auth_bp = Blueprint("auth", __name__)
 
     auth_bp.register_blueprint(auth_routes)
     auth_bp.register_blueprint(users_routes)

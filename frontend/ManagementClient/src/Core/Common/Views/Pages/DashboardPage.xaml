@@ -2,8 +2,13 @@
 <ContentPage x:Class="ManagementClient.Core.Common.Views.Bridges.DashboardPage"
              xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:ManagementClient.Core.Common.Converters"
              Title="{Binding Title}"
              Style="{StaticResource BasePageStyle}">
+
+    <ContentPage.Resources>
+        <converters:ViewToggleStyleConverter x:Key="ViewToggleStyleConverter"/>
+    </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*">
 
@@ -26,34 +31,31 @@
 
         <!-- Main Content -->
         <Grid Grid.Row="1"
-                ColumnDefinitions="280,*">
+              ColumnDefinitions="280,*">
 
-            <!-- Sidebar -->
-            <Border Grid.Column="0"
-                    BackgroundColor="{DynamicResource SurfaceBackgroundColor}"
-                    Stroke="{DynamicResource DividerColor}"
-                    StrokeThickness="0,0,1,0">
-
+            <!-- Sidebar with right border -->
+            <Grid Grid.Column="0" BackgroundColor="{DynamicResource SurfaceBackgroundColor}">
+                
                 <ScrollView Padding="20">
                     <StackLayout Spacing="20">
 
                         <!-- Search Section -->
                         <StackLayout Spacing="12">
                             <Label Text="Search Deliveries"
-                                    Style="{StaticResource SubtitleLabelStyle}"/>
+                                   Style="{StaticResource SubtitleLabelStyle}"/>
 
                             <Label Text="Zip Code"
-                                    Style="{StaticResource BodyLabelStyle}"/>
+                                   Style="{StaticResource BodyLabelStyle}"/>
                             <Entry Placeholder="Enter zip code"
                                    Text="{Binding ZipCode}"
                                    Style="{StaticResource RoundedEntryStyle}"/>
 
                             <Label Text="Radius (miles)"
-                                    Style="{StaticResource BodyLabelStyle}"/>
+                                   Style="{StaticResource BodyLabelStyle}"/>
                             <Stepper Value="{Binding RadiusInMiles}"
                                      Minimum="1"
-                                    Maximum="50"
-                                    Increment="1"/>
+                                     Maximum="50"
+                                     Increment="1"/>
                             <Label Text="{Binding RadiusInMiles}"
                                    Style="{StaticResource CaptionLabelStyle}"
                                    HorizontalOptions="Center"/>
@@ -66,14 +68,14 @@
                         <!-- Delivery Personnel List -->
                         <StackLayout Spacing="12">
                             <Label Text="Delivery Personnel"
-                                    Style="{StaticResource SubtitleLabelStyle}"/>
+                                   Style="{StaticResource SubtitleLabelStyle}"/>
 
                             <CollectionView ItemsSource="{Binding FilteredDeliveryPersons}"
                                             Style="{StaticResource BaseCollectionViewStyle}">
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Padding="0,8"
-                                                ColumnDefinitions="Auto,*,Auto">
+                                              ColumnDefinitions="Auto,*,Auto">
 
                                             <!-- Vehicle Icon -->
                                             <Label Grid.Column="0"
@@ -84,7 +86,7 @@
 
                                             <!-- Person Info -->
                                             <StackLayout Grid.Column="1"
-                                                    Spacing="2">
+                                                         Spacing="2">
                                                 <Label Text="{Binding Name}"
                                                        Style="{StaticResource BodyLabelStyle}"
                                                        FontAttributes="Bold"/>
@@ -106,8 +108,13 @@
 
                     </StackLayout>
                 </ScrollView>
-
-            </Border>
+                
+                <!-- Right border using BoxView -->
+                <BoxView BackgroundColor="{DynamicResource DividerColor}"
+                         WidthRequest="1"
+                         HorizontalOptions="End"
+                         VerticalOptions="FillAndExpand"/>
+            </Grid>
 
             <!-- Main Content Area -->
             <Grid Grid.Column="1">
@@ -115,23 +122,21 @@
                 <!-- Tab Header -->
                 <Grid RowDefinitions="Auto,*">
 
-                    <!-- View Toggle -->
-                    <Border Grid.Row="0"
-                            BackgroundColor="{DynamicResource SurfaceBackgroundColor}"
-                            Stroke="{DynamicResource DividerColor}"
-                            StrokeThickness="0,0,0,1"
-                            Padding="20,10">
+                    <!-- View Toggle with bottom border -->
+                    <Grid Grid.Row="0"
+                          BackgroundColor="{DynamicResource SurfaceBackgroundColor}"
+                          Padding="20,10">
 
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
 
                             <!-- View Toggle Buttons -->
                             <Button Grid.Column="0"
-                                    Text="🗺️ Map View"
+                                    Text="Map View"
                                     Command="{Binding SwitchToMapViewCommand}"
                                     Style="{Binding IsMapView, Converter={StaticResource ViewToggleStyleConverter}}"/>
 
                             <Button Grid.Column="1"
-                                    Text="👥 Delivery Guys"
+                                    Text="Delivery Guys"
                                     Command="{Binding SwitchToListViewCommand}"
                                     Style="{Binding IsListView, Converter={StaticResource ViewToggleStyleConverter}}"
                                     Margin="8,0,0,0"/>
@@ -145,44 +150,29 @@
                                     HeightRequest="36"
                                     Padding="16,0"/>
                         </Grid>
-                    </Border>
+                        
+                        <!-- Bottom border using BoxView -->
+                        <BoxView BackgroundColor="{DynamicResource DividerColor}"
+                                 HeightRequest="1"
+                                 VerticalOptions="End"
+                                 HorizontalOptions="FillAndExpand"/>
+                    </Grid>
 
                     <!-- Content Area -->
                     <Grid Grid.Row="1">
 
-                        <!-- Map View -->
+                        <!-- Map View with WebView -->
                         <Grid IsVisible="{Binding IsMapView}">
-                            <WebView x:Name="MapWebView"
-                                     Source="map.html"
+                            <WebView x:Name="CourierMapWebView"
                                      VerticalOptions="FillAndExpand"
-                                     HorizontalOptions="FillAndExpand"/>
-
-                            <!-- Map Placeholder -->
-                            <Border IsVisible="True"
-                                    BackgroundColor="{DynamicResource InputBackgroundColor}"
-                                    Stroke="{DynamicResource BorderColor}"
-                                    StrokeThickness="1"
-                                    Margin="20">
-                                <StackLayout VerticalOptions="Center"
-                                        HorizontalOptions="Center"
-                                        Spacing="10">
-                                    <Label Text="🗺️"
-                                            FontSize="48"
-                                            HorizontalOptions="Center"/>
-                                    <Label Text="Interactive map would be displayed here"
-                                           Style="{StaticResource SubtitleLabelStyle}"
-                                           HorizontalTextAlignment="Center"/>
-                                    <Label Text="Showing delivery personnel and their locations"
-                                           Style="{StaticResource CaptionLabelStyle}"
-                                           HorizontalTextAlignment="Center"/>
-                                </StackLayout>
-                            </Border>
+                                     HorizontalOptions="FillAndExpand"
+                                     BackgroundColor="White"/>
                         </Grid>
 
                         <!-- List View -->
                         <ScrollView IsVisible="{Binding IsListView}">
                             <StackLayout Padding="20"
-                                    Spacing="20">
+                                         Spacing="20">
 
                                 <!-- Header -->
                                 <Grid ColumnDefinitions="*,Auto">
@@ -196,7 +186,7 @@
                                                 Style="{StaticResource BaseCollectionViewStyle}">
                                     <CollectionView.ItemsLayout>
                                         <GridItemsLayout Orientation="Vertical"
-                                                Span="3"/>
+                                                         Span="3"/>
                                     </CollectionView.ItemsLayout>
 
                                     <CollectionView.ItemTemplate>
@@ -214,7 +204,7 @@
                                                         <Border Grid.Column="1"
                                                                 Style="{StaticResource StatusBadgeStyle}"
                                                                 BackgroundColor="{Binding StatusColor}">
-                                                            <Label Text="{Binding Status}"
+                                                            <Label Text="{Binding StatusText}"
                                                                    TextColor="White"
                                                                    FontSize="10"
                                                                    FontAttributes="Bold"
@@ -230,8 +220,6 @@
 
                                                     <!-- Contact Info -->
                                                     <StackLayout Spacing="4">
-                                                        <Label Text="{Binding Email}"
-                                                               Style="{StaticResource CaptionLabelStyle}"/>
                                                         <Label Text="{Binding Phone}"
                                                                Style="{StaticResource CaptionLabelStyle}"/>
                                                         <Label Text="{Binding Location, StringFormat='📍 {0}'}"
@@ -240,17 +228,17 @@
 
                                                     <!-- Action Buttons -->
                                                     <Grid ColumnDefinitions="*,*"
-                                                            ColumnSpacing="8"
-                                                            Margin="0,8,0,0">
+                                                          ColumnSpacing="8"
+                                                          Margin="0,8,0,0">
                                                         <Button Grid.Column="0"
-                                                                Text="✏️ Edit"
+                                                                Text="Edit"
                                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditDeliveryPersonCommand}"
                                                                 CommandParameter="{Binding}"
                                                                 Style="{StaticResource SecondaryButtonStyle}"
                                                                 FontSize="12"/>
 
                                                         <Button Grid.Column="1"
-                                                                Text="🗑️ Delete"
+                                                                Text="Delete"
                                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteDeliveryPersonCommand}"
                                                                 CommandParameter="{Binding}"
                                                                 Style="{StaticResource DangerButtonStyle}"

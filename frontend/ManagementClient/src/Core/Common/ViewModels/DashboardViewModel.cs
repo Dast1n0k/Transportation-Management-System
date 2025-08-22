@@ -11,24 +11,24 @@ namespace ManagementClient.Core.Common.ViewModels;
 
 public class DashboardViewModel : BaseViewModel
 {
-    private readonly IDeliveryPersonService _deliveryPersonService;
-    private readonly IAuthenticationService _authService;
+    private readonly ICourierService _courierService;
+    private readonly IAuthService _authService;
     private readonly INavigationService _navigationService;
     private readonly IDialogService _dialogService;
 
     private string _zipCode = string.Empty;
     private int _radiusInMiles = 5;
     private bool _isMapView = true;
-    private ObservableCollection<DeliveryPerson> _deliveryPersons = new();
-    private ObservableCollection<DeliveryPerson> _filteredDeliveryPersons = new();
+    private ObservableCollection<Courier> _deliveryPersons = new();
+    private ObservableCollection<Courier> _filteredDeliveryPersons = new();
 
     public DashboardViewModel(
-        IDeliveryPersonService deliveryPersonService,
-        IAuthenticationService authService,
+        ICourierService courierService,
+        IAuthService authService,
         INavigationService navigationService,
         IDialogService dialogService)
     {
-        _deliveryPersonService = deliveryPersonService;
+        _courierService = courierService;
         _authService = authService;
         _navigationService = navigationService;
         _dialogService = dialogService;
@@ -38,23 +38,24 @@ public class DashboardViewModel : BaseViewModel
         LoadDeliveryPersonsCommand = new AsyncRelayCommand(LoadDeliveryPersonsAsync);
         SearchCommand = new AsyncRelayCommand(SearchDeliveryPersonsAsync, CanSearch);
         SwitchToMapViewCommand = new RelayCommand(() => IsMapView = true);
-        SwitchToListViewCommand = new RelayCommand(() => IsMapView = false);
+        SwitchToListViewCommand = new AsyncRelayCommand(NavigateToDeliveryGuysAsync);
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);
         AddNewDeliveryPersonCommand = new AsyncRelayCommand(AddNewDeliveryPersonAsync);
-        EditDeliveryPersonCommand = new RelayCommand<DeliveryPerson>(EditDeliveryPerson);
-        DeleteDeliveryPersonCommand = new RelayCommand<DeliveryPerson>(
+        EditDeliveryPersonCommand = new RelayCommand<Courier>(EditDeliveryPerson);
+        DeleteDeliveryPersonCommand = new RelayCommand<Courier>(
             async person => await DeleteDeliveryPersonAsync(person)
         );
-        // DeleteDeliveryPersonCommand = new AsyncRelayCommand<DeliveryPerson>(DeleteDeliveryPersonAsync);
+
+        _courierService.CouriersChanged += async (s, e) => await RefreshAsync();
     }
 
-    public ObservableCollection<DeliveryPerson> DeliveryPersons
+    public ObservableCollection<Courier> DeliveryPersons
     {
         get => _deliveryPersons;
         set => SetProperty(ref _deliveryPersons, value);
     }
 
-    public ObservableCollection<DeliveryPerson> FilteredDeliveryPersons
+    public ObservableCollection<Courier> FilteredDeliveryPersons
     {
         get => _filteredDeliveryPersons;
         set => SetProperty(ref _filteredDeliveryPersons, value);
@@ -86,11 +87,11 @@ public class DashboardViewModel : BaseViewModel
 
     public bool IsListView => !IsMapView;
 
-    public string CurrentUserName => _authService.CurrentUser?.Name ?? "User";
+    public string CurrentUserName => _authService.CurrentUser?.Username ?? "User";
 
-    public int ActiveDeliveryCount => DeliveryPersons.Count(dp => dp.Status == DeliveryPersonStatus.Active);
-    public int BusyDeliveryCount => DeliveryPersons.Count(dp => dp.Status == DeliveryPersonStatus.Busy);
-    public int OfflineDeliveryCount => DeliveryPersons.Count(dp => dp.Status == DeliveryPersonStatus.Offline);
+    public int ActiveDeliveryCount => DeliveryPersons.Count(dp => dp.IsAvailable);
+    public int BusyDeliveryCount => 0; // Backend doesn't have busy status
+    public int OfflineDeliveryCount => DeliveryPersons.Count(dp => dp.IsAvailable);
 
     public ICommand LoadDeliveryPersonsCommand { get; }
     public ICommand SearchCommand { get; }
@@ -110,18 +111,18 @@ public class DashboardViewModel : BaseViewModel
     {
         await ExecuteAsync(async () =>
         {
-            var deliveryPersons = await _deliveryPersonService.GetDeliveryPersonsAsync();
+            var couriers = await _courierService.GetCouriersAsync();
 
             DeliveryPersons.Clear();
-            foreach (var person in deliveryPersons)
+            foreach (var courier in couriers)
             {
-                DeliveryPersons.Add(person);
+                DeliveryPersons.Add(courier);
             }
 
             FilteredDeliveryPersons.Clear();
-            foreach (var person in DeliveryPersons)
+            foreach (var courier in DeliveryPersons)
             {
-                FilteredDeliveryPersons.Add(person);
+                FilteredDeliveryPersons.Add(courier);
             }
 
             OnPropertyChanged(nameof(ActiveDeliveryCount));
@@ -139,18 +140,19 @@ public class DashboardViewModel : BaseViewModel
     {
         await ExecuteAsync(async () =>
         {
-            var request = new DeliverySearchRequest
-            {
-                ZipCode = ZipCode.Trim(),
-                RadiusInMiles = RadiusInMiles
-            };
+            // Use simple filtering instead of zipcode-based search for now
+            // This can be enhanced when geocoding is implemented
+            var searchTerm = ZipCode.Trim().ToLower();
 
-            var results = await _deliveryPersonService.SearchDeliveryPersonsAsync(request);
+            var results = DeliveryPersons.Where(c =>
+                c.Location.ToLower().Contains(searchTerm) ||
+                c.Zipcode.Contains(ZipCode.Trim()))
+                .ToList();
 
             FilteredDeliveryPersons.Clear();
-            foreach (var person in results)
+            foreach (var courier in results)
             {
-                FilteredDeliveryPersons.Add(person);
+                FilteredDeliveryPersons.Add(courier);
             }
         });
     }
@@ -168,45 +170,57 @@ public class DashboardViewModel : BaseViewModel
         }
     }
 
+    private async Task NavigateToDeliveryGuysAsync()
+    {
+        try
+        {
+            await _navigationService.NavigateToAsync("delivery-guys");
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync("Error", $"Failed to navigate to delivery guys: {ex.Message}");
+        }
+    }
+
     private async Task AddNewDeliveryPersonAsync()
     {
         var parameters = new Dictionary<string, object>
         {
             ["IsEdit"] = false
         };
-        await _navigationService.NavigateToAsync("deliveryPersonModal", parameters);
+        await _navigationService.NavigateToAsync("courier-modal", parameters);
     }
 
-    private void EditDeliveryPerson(DeliveryPerson? deliveryPerson)
+    private void EditDeliveryPerson(Courier? courier)
     {
-        if (deliveryPerson != null)
+        if (courier != null)
         {
             var parameters = new Dictionary<string, object>
             {
                 ["IsEdit"] = true,
-                ["DeliveryPerson"] = deliveryPerson
+                ["DeliveryPerson"] = courier
             };
-            _navigationService.NavigateToAsync("deliveryPersonModal", parameters);
+            _navigationService.NavigateToAsync("courier-modal", parameters);
         }
     }
 
-    private async Task DeleteDeliveryPersonAsync(DeliveryPerson? deliveryPerson)
+    private async Task DeleteDeliveryPersonAsync(Courier? courier)
     {
-        if (deliveryPerson == null) return;
+        if (courier == null) return;
 
         var confirm = await _dialogService.ShowConfirmationAsync(
-            "Delete Delivery Person",
-            $"Are you sure you want to delete {deliveryPerson.Name}?");
+            "Delete Courier",
+            $"Are you sure you want to delete {courier.Name}?");
 
         if (confirm)
         {
             await ExecuteAsync(async () =>
             {
-                var success = await _deliveryPersonService.DeleteDeliveryPersonAsync(deliveryPerson.Id);
+                var success = await _courierService.RemoveCourierAsync(courier.Id);
                 if (success)
                 {
-                    DeliveryPersons.Remove(deliveryPerson);
-                    FilteredDeliveryPersons.Remove(deliveryPerson);
+                    DeliveryPersons.Remove(courier);
+                    FilteredDeliveryPersons.Remove(courier);
 
                     OnPropertyChanged(nameof(ActiveDeliveryCount));
                     OnPropertyChanged(nameof(BusyDeliveryCount));

@@ -47,19 +47,22 @@ public abstract class BaseViewModel : INotifyPropertyChanged
         if (IsBusy)
             return;
 
-        try
-        {
-            IsBusy = true;
-            await operation();
-        }
-        catch (Exception ex)
-        {
-            await HandleErrorAsync(ex, operationName);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        IsBusy = true;
+        await operation();
+
+        // try
+        // {
+        //     IsBusy = true;
+        //     await operation();
+        // }
+        // catch
+        // {
+        //     // await HandleErrorAsync(ex, operationName);
+        // }
+        // finally
+        // {
+        //     IsBusy = false;
+        // }
     }
 
     protected virtual async Task<T?> ExecuteAsync<T>(Func<Task<T>> operation, [CallerMemberName] string? operationName = null)
@@ -67,34 +70,35 @@ public abstract class BaseViewModel : INotifyPropertyChanged
         if (IsBusy)
             return default;
 
-        try
-        {
-            IsBusy = true;
-            return await operation();
-        }
-        catch (Exception ex)
-        {
-            await HandleErrorAsync(ex, operationName);
-            return default;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        IsBusy = true;
+        return await operation();
+
+        // try
+        // {
+        //     IsBusy = true;
+        //     return await operation();
+        // }
+        // catch
+        // {
+        //     // await HandleErrorAsync(ex, operationName);
+        //     return default;
+        // }
+        // finally
+        // {
+        //     IsBusy = false;
+        // }
     }
 
-    protected virtual async Task HandleErrorAsync(Exception exception, string? operationName)
-    {
-        // Log error (in production, use proper logging)
-        System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {exception.Message}");
+    // protected virtual async Task HandleErrorAsync(Exception exception, string? operationName)
+    // {
+    //     System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {exception.Message}");
 
-        // Show user-friendly message
-        if (Application.Current?.MainPage != null)
-        {
-            await Application.Current.MainPage.DisplayAlert("Error",
-                "An error occurred. Please try again.", "OK");
-        }
-    }
+    //     if (Application.Current?.MainPage != null)
+    //     {
+    //         await Application.Current.MainPage.DisplayAlert("Error",
+    //             "An error occurred. Please try again.", "OK");
+    //     }
+    // }
 }
 
 public class RelayCommand : ICommand

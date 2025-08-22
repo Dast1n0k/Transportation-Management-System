@@ -1,0 +1,20 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CopyEnvFile" AfterTargets="Build">
+    <ItemGroup>
+      <EnvFile Include="$(MSBuildProjectDirectory)\.env" />
+    </ItemGroup>
+
+    <!-- Compute full output folder -->
+    <PropertyGroup>
+      <FullOutputDir>$(BaseOutputPath)$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\</FullOutputDir>
+    </PropertyGroup>
+
+    <Message Text="Copying .env to $(FullOutputDir)" Importance="High" />
+
+    <Copy
+      SourceFiles="@(EnvFile)"
+      DestinationFolder="$(FullOutputDir)"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
+</Project>

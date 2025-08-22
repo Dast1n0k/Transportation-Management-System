@@ -9,11 +9,13 @@ public partial class AppShell : Shell
 	{
 		InitializeComponent();
 
-		// Routing.RegisterRoute(nameof(LogInPage), typeof(LogInPage));
-		Routing.RegisterRoute("deliveryPersonModal", typeof(DeliveryPersonModalPage));
-		// Routing.RegisterRoute(nameof(MainPage), typeof(MainPage));
-		// Routing.RegisterRoute(nameof(PersonnelPage), typeof(PersonnelPage));
+		// Register routes for programmatic navigation
+		Routing.RegisterRoute("courier-modal", typeof(CourierModalPage));
+		Routing.RegisterRoute("delivery-guys", typeof(DeliveryGuysPage));
 
-		// Shell.Current.GoToAsync("//LogInPage");
+		// Routing.RegisterRoute(nameof(LoginPage), typeof(LoginPage));
+		// Routing.RegisterRoute(nameof(DashboardPage), typeof(DashboardPage));
+
+		// Shell.Current.GoToAsync("//LoginPage");
 	}
 }

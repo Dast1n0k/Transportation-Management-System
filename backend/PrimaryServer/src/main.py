@@ -22,10 +22,13 @@ def create_app():
 
     # Database configuration
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    DB_PATH = os.path.join(BASE_DIR, "..", "dbs", "auth.db")
-    DB_PATH = os.path.normpath(DB_PATH)
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    app.config["DATABASE"] = DB_PATH
+    DB_PATH_AUTH = os.path.join(BASE_DIR, "..", "dbs", "auth.db")
+    DB_PATH_HRIS = os.path.join(BASE_DIR, "..", "dbs", "hris.db")
+    DB_PATH_AUTH = os.path.normpath(DB_PATH_AUTH)
+    DB_PATH_HRIS = os.path.normpath(DB_PATH_HRIS)
+    # os.makedirs(os.path.dirname(DB_PATH_AUTH), exist_ok=True)
+    app.config["DATABASE_AUTH"] = DB_PATH_AUTH
+    app.config["DATABASE_HRIS"] = DB_PATH_HRIS
 
     # Register blueprints
     app.register_blueprint(auth_bp)

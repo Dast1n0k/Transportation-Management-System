@@ -1,15 +1,10 @@
-# PowerShell script to run ../src/test.py with parent directory as working directory
+$rootDir = Split-Path -Parent (Get-Location)
 
-# Get the parent directory of the current location
-$parentDir = Split-Path -Parent (Get-Location)
-
-# Change to parent directory and run the Python script
-Push-Location $parentDir
+Push-Location $rootDir
 try {
-    Write-Host "Running test.py from directory: $(Get-Location)" -ForegroundColor Green
-    python src/test.py
-    
-    # Check if the command was successful
+    Write-Host "Running main.py from directory: $(Get-Location)" -ForegroundColor Green
+    python src/main.py
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Script executed successfully!" -ForegroundColor Green
     } else {
@@ -18,6 +13,5 @@ try {
 } catch {
     Write-Host "Error occurred: $($_.Exception.Message)" -ForegroundColor Red
 } finally {
-    # Always return to the original directory
     Pop-Location
 }
