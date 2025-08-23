@@ -39,7 +39,13 @@ public class DashboardViewModel : BaseViewModel
     public bool HasPerformedSearch
     {
         get => _hasPerformedSearch;
-        set => SetProperty(ref _hasPerformedSearch, value);
+        set 
+        {
+            if (SetProperty(ref _hasPerformedSearch, value))
+            {
+                ((AsyncRelayCommand)StopSearchCommand).RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public bool ForceMapUpdate
@@ -64,6 +70,7 @@ public class DashboardViewModel : BaseViewModel
         LoadDeliveryPersonsCommand = new AsyncRelayCommand(LoadDeliveryPersonsAsync);
         SearchCommand = new AsyncRelayCommand(SearchDeliveryPersonsAsync, CanSearch);
         SearchZipcodeCommand = new AsyncRelayCommand(SearchZipcodeAsync, CanSearchZipcode);
+        StopSearchCommand = new AsyncRelayCommand(StopSearchAsync, CanStopSearch);
         SwitchToMapViewCommand = new AsyncRelayCommand(SwitchToMapViewAsync);
         SwitchToListViewCommand = new AsyncRelayCommand(NavigateToDeliveryGuysAsync);
         LogoutCommand = new AsyncRelayCommand(LogoutAsync);
@@ -102,6 +109,7 @@ public class DashboardViewModel : BaseViewModel
             {
                 ((AsyncRelayCommand)SearchCommand).RaiseCanExecuteChanged();
                 ((AsyncRelayCommand)SearchZipcodeCommand).RaiseCanExecuteChanged();
+                ((AsyncRelayCommand)StopSearchCommand).RaiseCanExecuteChanged();
             }
         }
     }
@@ -160,6 +168,7 @@ public class DashboardViewModel : BaseViewModel
     public ICommand LoadDeliveryPersonsCommand { get; }
     public ICommand SearchCommand { get; }
     public ICommand SearchZipcodeCommand { get; }
+    public ICommand StopSearchCommand { get; }
     public ICommand SwitchToMapViewCommand { get; }
     public ICommand SwitchToListViewCommand { get; }
     public ICommand LogoutCommand { get; }
@@ -247,22 +256,23 @@ public class DashboardViewModel : BaseViewModel
 
             await Task.CompletedTask; // Add await to satisfy async requirement
         });
+
+        OnPropertyChanged(nameof(ForceMapUpdate));
     }
 
     private async Task SearchZipcodeAsync()
     {
         await ExecuteAsync(async () =>
         {
-            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SearchZipcodeAsync called with zipcode {ZipCode} and radius {RadiusInMiles}");
-
             try
             {
-                // Use the new backend endpoint that combines geocoding with courier search
-                var searchResult = await SearchCouriersByZipcodeAsync(ZipCode.Trim(), RadiusInMiles);
+                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SearchZipcodeAsync called with zipcode {ZipCode} and radius {RadiusInMiles}");
 
-                if (searchResult != null && searchResult.Geocoding != null)
+                var searchResult = await SearchCouriersByZipcodeAsync(ZipCode, RadiusInMiles);
+
+                if (searchResult?.Geocoding != null)
                 {
-                    // STEP 1: EXPLICITLY SET SEARCH LOCATION DATA (ALWAYS, REGARDLESS OF COURIER RESULTS)
+                    // STEP 1: SET SEARCH LOCATION COORDINATES (TRIGGERS MAP UPDATES)
                     SearchLatitude = searchResult.Geocoding.Coordinates.Lat;
                     SearchLongitude = searchResult.Geocoding.Coordinates.Lng;
                     HasSearchLocation = true;
@@ -271,40 +281,32 @@ public class DashboardViewModel : BaseViewModel
                     System.Diagnostics.Debug.WriteLine($"DashboardViewModel: EXPLICIT GEOCODING SUCCESS - Lat: {SearchLatitude}, Lng: {SearchLongitude}");
                     System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SEARCH LOCATION SET - WILL TRIGGER EXPLICIT WAYPOINT AND RADIUS DISPLAY");
 
-                    // STEP 2: TRIGGER EXPLICIT SEARCH VISUALIZATION IMMEDIATELY
-                    OnPropertyChanged(nameof(SearchLatitude));
-                    OnPropertyChanged(nameof(SearchLongitude));
-                    OnPropertyChanged(nameof(HasSearchLocation)); // This triggers the backup visualization
-
-                    // STEP 3: UPDATE COURIER COLLECTIONS (EVEN IF EMPTY)
-                    DeliveryPersons.Clear();
-                    FilteredDeliveryPersons.Clear();
-
-                    if (searchResult.Couriers != null && searchResult.Couriers.Any())
+                    // STEP 2: UPDATE COURIER COLLECTIONS
+                    if (searchResult.Couriers?.Any() == true)
                     {
+                        System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Found {searchResult.Couriers.Count()} couriers");
+                        
+                        FilteredDeliveryPersons.Clear();
                         foreach (var courier in searchResult.Couriers)
                         {
-                            DeliveryPersons.Add(courier);
                             FilteredDeliveryPersons.Add(courier);
                         }
-                        System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Found {searchResult.Couriers.Count()} couriers");
                     }
                     else
                     {
                         System.Diagnostics.Debug.WriteLine("DashboardViewModel: NO COURIERS FOUND - BUT WAYPOINT AND RADIUS WILL STILL BE DISPLAYED");
+                        FilteredDeliveryPersons.Clear();
                     }
 
-                    // STEP 4: TRIGGER ALL OTHER PROPERTY NOTIFICATIONS
-                    OnPropertyChanged(nameof(HasPerformedSearch));
+                    // STEP 3: TRIGGER NON-MAP PROPERTY NOTIFICATIONS
                     OnPropertyChanged(nameof(DeliveryPersons));
                     OnPropertyChanged(nameof(FilteredDeliveryPersons));
-                    OnPropertyChanged(nameof(RadiusInMiles));
 
-                    // STEP 5: EXPLICITLY FORCE COMPLETE MAP UPDATE
-                    ForceMapUpdate = !ForceMapUpdate; // Toggle to always trigger change
-                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: EXPLICIT FORCE MAP UPDATE TRIGGERED - ForceMapUpdate: {ForceMapUpdate}");
+                    // STEP 4: SINGLE MAP UPDATE TRIGGER - FORCE PROPERTY CHANGE
+                    ForceMapUpdate = !ForceMapUpdate;
+                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: EXPLICITLY TRIGGERING ForceMapUpdate PROPERTY CHANGE - Value: {ForceMapUpdate}");
 
-                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SEARCH COMPLETED - EXPLICITLY TRIGGERING MAP UPDATES (WAYPOINT AND RADIUS WILL BE SHOWN REGARDLESS OF COURIER RESULTS)");
+                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SEARCH COMPLETED - WAITING FOR BRIDGE TO HANDLE ForceMapUpdate");
                 }
                 else
                 {
@@ -333,6 +335,12 @@ public class DashboardViewModel : BaseViewModel
                 
                 System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Error in SearchZipcodeAsync: {ex.Message}");
                 await _dialogService.ShowAlertAsync("Error", $"Failed to search for couriers: {ex.Message}");
+            }
+            finally
+            {
+                // Ensure the command can execute again after completion - following LoginViewModel pattern
+                ((AsyncRelayCommand)SearchZipcodeCommand).RaiseCanExecuteChanged();
+                System.Diagnostics.Debug.WriteLine("DashboardViewModel: SearchZipcodeCommand.RaiseCanExecuteChanged() called");
             }
         });
     }
@@ -412,11 +420,9 @@ public class DashboardViewModel : BaseViewModel
     {
         // Calculate distance from search location to courier
         var distanceText = "N/A";
-        if (HasSearchLocation && courier.Latitude != 0 && courier.Longitude != 0)
-        {
-            var distance = CalculateDistance(SearchLatitude, SearchLongitude, courier.Latitude, courier.Longitude);
-            distanceText = $"{distance:F1} miles";
-        }
+
+        var distance = CalculateDistance(SearchLatitude, SearchLongitude, courier.Latitude, courier.Longitude);
+        distanceText = $"{distance:F1} miles";
 
         // Format as requested:
         // Line 1: zipcode, address, distance from target point
@@ -472,7 +478,7 @@ public class DashboardViewModel : BaseViewModel
                 await _authService.LogoutAsync();
 
                 // Navigate to login (correct route)
-                await _navigationService.NavigateToAsync("login");
+                await _navigationService.NavigateToAsync("//login");
 
                 System.Diagnostics.Debug.WriteLine("DashboardViewModel: Logout completed");
             });
@@ -604,5 +610,66 @@ public class DashboardViewModel : BaseViewModel
         OnPropertyChanged(nameof(ActiveDeliveryCount));
         OnPropertyChanged(nameof(BusyDeliveryCount));
         OnPropertyChanged(nameof(OfflineDeliveryCount));
+    }
+
+    private bool CanStopSearch()
+    {
+        return HasPerformedSearch && !IsBusy;
+    }
+
+    private async Task StopSearchAsync()
+    {
+        await ExecuteAsync(async () =>
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: StopSearchAsync called - CLEARING ALL SEARCH STATE");
+
+            try
+            {
+                // STEP 1: CLEAR ALL SEARCH STATE
+                HasSearchLocation = false;
+                HasPerformedSearch = false;
+                SearchLatitude = 39.8283; // Reset to default (center of US)
+                SearchLongitude = -98.5795;
+                ZipCode = string.Empty;
+
+                System.Diagnostics.Debug.WriteLine("DashboardViewModel: Search state cleared");
+
+                // STEP 2: CLEAR SEARCH RESULTS AND SHOW ALL COURIERS
+                FilteredDeliveryPersons.Clear();
+                
+                // Load all couriers to show them again
+                await _courierService.RefreshCouriersAsync();
+                var allCouriers = await _courierService.GetCouriersAsync();
+                
+                DeliveryPersons.Clear();
+                foreach (var courier in allCouriers)
+                {
+                    DeliveryPersons.Add(courier);
+                    FilteredDeliveryPersons.Add(courier); // Show all couriers
+                }
+
+                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Showing all {FilteredDeliveryPersons.Count} couriers");
+
+                // STEP 3: TRIGGER PROPERTY NOTIFICATIONS
+                OnPropertyChanged(nameof(SearchLatitude));
+                OnPropertyChanged(nameof(SearchLongitude));
+                OnPropertyChanged(nameof(HasSearchLocation));
+                OnPropertyChanged(nameof(HasPerformedSearch));
+                OnPropertyChanged(nameof(ZipCode));
+                OnPropertyChanged(nameof(DeliveryPersons));
+                OnPropertyChanged(nameof(FilteredDeliveryPersons));
+
+                // STEP 4: TRIGGER MAP CLEANUP - This will clear radius and waypoint
+                ForceMapUpdate = !ForceMapUpdate;
+                System.Diagnostics.Debug.WriteLine("DashboardViewModel: Triggered map cleanup to remove search visualization");
+
+                System.Diagnostics.Debug.WriteLine("DashboardViewModel: Stop search completed - all search state cleared");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Error in StopSearchAsync: {ex.Message}");
+                await _dialogService.ShowAlertAsync("Error", $"Failed to stop search: {ex.Message}");
+            }
+        });
     }
 }

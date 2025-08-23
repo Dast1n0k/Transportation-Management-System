@@ -37,6 +37,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("name")]
     public string Name
     {
         get => _name;
@@ -50,6 +51,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("surname")]
     public string Surname
     {
         get => _surname;
@@ -63,6 +65,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("phone")]
     public string Phone
     {
         get => _phone;
@@ -76,6 +79,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("dimensions")]
     public string Dimensions
     {
         get => _dimensions;
@@ -104,6 +108,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("zipcode")]
     public string Zipcode
     {
         get => _zipcode;
@@ -117,6 +122,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("latitude")]
     public double Latitude
     {
         get => _latitude;
@@ -130,6 +136,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("longitude")]
     public double Longitude
     {
         get => _longitude;
@@ -143,6 +150,7 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    [JsonPropertyName("capacity")]
     public string Capacity
     {
         get => _capacity;
@@ -166,12 +174,13 @@ public class Courier : INotifyPropertyChanged
             {
                 _isAvailable = value;
                 OnPropertyChanged(nameof(IsAvailable));
-                //OnPropertyChanged(nameof(StatusText));
-                //OnPropertyChanged(nameof(StatusColor));
+                OnPropertyChanged(nameof(StatusText));
+                OnPropertyChanged(nameof(StatusColor));
             }
         }
     }
 
+    [JsonPropertyName("notes")]
     public string Notes
     {
         get => _notes;

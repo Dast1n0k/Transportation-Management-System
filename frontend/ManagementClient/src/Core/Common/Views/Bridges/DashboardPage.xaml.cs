@@ -7,6 +7,7 @@ using Microsoft.Maui.Controls;
 using ManagementClient.Core.Common.ViewModels;
 using ManagementClient.Core.Common.Services;
 using ManagementClient.Core.Common.Reposits;
+using System.Threading; // Added for CancellationTokenSource
 
 namespace ManagementClient.Core.Common.Views.Bridges;
 
@@ -17,6 +18,10 @@ public partial class DashboardPage : ContentPage
     private readonly ICourierRepository _courierRepository;
     private bool _isMapInitialized = false;
     private int _mapRedrawCounter = 0;
+    
+    // Add debouncing fields
+    private bool _isMapUpdateInProgress = false;
+    private CancellationTokenSource? _mapUpdateCancellation;
 
     public DashboardPage(DashboardViewModel viewModel, ICourierService courierService, ICourierRepository courierRepository)
     {
@@ -39,7 +44,7 @@ public partial class DashboardPage : ContentPage
 
         try
         {
-            System.Diagnostics.Debug.WriteLine("DashboardPage: OnAppearing started - FORCING DATABASE REFRESH");
+            System.Diagnostics.Debug.WriteLine("DashboardPage: OnAppearing started - FORCING DATABASE REFRESH AND CLEARING SEARCH STATE");
 
             if (!_isMapInitialized)
             {
@@ -62,6 +67,22 @@ public partial class DashboardPage : ContentPage
                 _isMapInitialized = true;
             }
 
+            // NEW: AUTOMATICALLY STOP SEARCH WHEN RETURNING FROM DELIVERY GUYS PAGE
+            if (_viewModel.HasPerformedSearch)
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: Previous search detected - AUTOMATICALLY STOPPING SEARCH to show all couriers");
+                
+                // Use the ViewModel's StopSearchCommand to properly clear all search state
+                if (_viewModel.StopSearchCommand.CanExecute(null))
+                {
+                    _viewModel.StopSearchCommand.Execute(null);
+                    System.Diagnostics.Debug.WriteLine("DashboardPage: Search state cleared automatically using StopSearchCommand");
+                    
+                    // Give it a moment to complete since Execute is async but returns void
+                    await Task.Delay(100);
+                }
+            }
+
             // EXPLICITLY PERFORM GET REQUEST TO DATABASE VIA COURIERREPOSITORY
             System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICITLY PERFORMING GET REQUEST TO DATABASE VIA CourierRepository.ReadCouriersAsync()");
             var freshCouriersFromDb = await _courierRepository.ReadCouriersAsync();
@@ -71,52 +92,11 @@ public partial class DashboardPage : ContentPage
             System.Diagnostics.Debug.WriteLine("DashboardPage: LITERALLY DELETING ALL OLD WAYPOINTS AND ADDING ALL NEW ONES FROM DATABASE");
             await ExplicitlyUpdateMapWithFreshDatabaseDataAsync(freshCouriersFromDb);
 
-            // Update the ViewModel with fresh database data BUT RESPECT SEARCH STATE
-            System.Diagnostics.Debug.WriteLine("DashboardPage: Updating ViewModel with fresh database data...");
-            _viewModel.DeliveryPersons.Clear();
-            foreach (var courier in freshCouriersFromDb)
-            {
-                _viewModel.DeliveryPersons.Add(courier);
-            }
-
-            // CRITICAL FIX: Only populate FilteredDeliveryPersons if a search has been performed
-            if (_viewModel.HasPerformedSearch)
-            {
-                System.Diagnostics.Debug.WriteLine("DashboardPage: Search was performed - keeping search results visible");
-                // Keep existing filtered results, but refresh with updated data
-                var currentZipcode = _viewModel.ZipCode?.Trim();
-                if (!string.IsNullOrEmpty(currentZipcode))
-                {
-                    // Re-filter with fresh data based on current search
-                    var searchResults = _viewModel.DeliveryPersons.Where(c => 
-                        c.Location.ToLower().Contains(currentZipcode.ToLower()) || 
-                        c.Zipcode.Contains(currentZipcode)).ToList();
-                    
-                    _viewModel.FilteredDeliveryPersons.Clear();
-                    foreach (var courier in searchResults)
-                    {
-                        _viewModel.FilteredDeliveryPersons.Add(courier);
-                    }
-                    System.Diagnostics.Debug.WriteLine($"DashboardPage: Refreshed search results - {_viewModel.FilteredDeliveryPersons.Count} couriers");
-                }
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("DashboardPage: No search performed - keeping courier list hidden");
-                _viewModel.FilteredDeliveryPersons.Clear();
-            }
-
-            // Fit map to content only if there are couriers or a search location
-            if (_viewModel.FilteredDeliveryPersons.Any() || _viewModel.HasSearchLocation)
-            {
-                await FitMapToContentAsync();
-            }
-
-            System.Diagnostics.Debug.WriteLine("DashboardPage: Database refresh and map update completed");
+            System.Diagnostics.Debug.WriteLine("DashboardPage: Database refresh and map update completed - search state cleared");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error in OnAppearing: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Error in OnAppearing: {ex.Message}");
         }
     }
 
@@ -124,11 +104,11 @@ public partial class DashboardPage : ContentPage
     {
         System.Diagnostics.Debug.WriteLine($"DashboardPage: Property changed: {e.PropertyName} - IsMapView: {_viewModel.IsMapView}, HasSearchLocation: {_viewModel.HasSearchLocation}");
 
-        // EXPLICIT FORCE MAP UPDATE - TRIGGERED EVERY TIME SEARCH IS PERFORMED
+        // EXPLICIT FORCE MAP UPDATE - TRIGGERED EVERY TIME SEARCH IS PERFORMED OR STOPPED
         if (e.PropertyName == nameof(_viewModel.ForceMapUpdate))
         {
             _mapRedrawCounter++;
-            System.Diagnostics.Debug.WriteLine($"DashboardPage: EXPLICIT FORCE MAP UPDATE #{_mapRedrawCounter} - LITERALLY FORCING COMPLETE MAP REDRAW");
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: EXPLICIT FORCE MAP UPDATE #{_mapRedrawCounter} - RECEIVED ForceMapUpdate PROPERTY CHANGE");
             System.Diagnostics.Debug.WriteLine($"DashboardPage: ForceMapUpdate value: {_viewModel.ForceMapUpdate}, IsMapView: {_viewModel.IsMapView}, HasSearchLocation: {_viewModel.HasSearchLocation}");
             
             if (_viewModel.IsMapView)
@@ -137,40 +117,21 @@ public partial class DashboardPage : ContentPage
                 {
                     if (_viewModel.HasSearchLocation)
                     {
-                        System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICITLY UPDATING COMPLETE MAP - WAYPOINT, RADIUS, AND ALL COURIER ICONS");
+                        System.Diagnostics.Debug.WriteLine("DashboardPage: HAS SEARCH LOCATION - UPDATING SEARCH VISUALIZATION");
                         await ExplicitlyUpdateSearchVisualizationAsync();
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICITLY UPDATING COURIER MARKERS ONLY");
-                        await UpdateMapMarkersAsync();
+                        System.Diagnostics.Debug.WriteLine("DashboardPage: NO SEARCH LOCATION - CLEARING SEARCH VISUALIZATION AND SHOWING ALL COURIERS");
+                        await ClearSearchVisualizationAndShowAllCouriersAsync();
                     }
-                    
-                    System.Diagnostics.Debug.WriteLine("DashboardPage: EXPLICIT FORCE MAP UPDATE COMPLETED - ALL ELEMENTS LITERALLY DISPLAYED");
+                    System.Diagnostics.Debug.WriteLine("DashboardPage: MAP UPDATE COMPLETED");
                 });
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"DashboardPage: NOT IN MAP VIEW - Will trigger update when switched to map view");
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: CONDITIONS NOT MET - IsMapView: {_viewModel.IsMapView}");
             }
-        }
-        // BACKUP: Handle search location changes
-        else if (e.PropertyName == nameof(_viewModel.HasSearchLocation) && _viewModel.HasSearchLocation && _viewModel.IsMapView)
-        {
-            System.Diagnostics.Debug.WriteLine($"DashboardPage: BACKUP Search location updated - EXPLICITLY UPDATING COMPLETE MAP");
-            Dispatcher.Dispatch(async () =>
-            {
-                await ExplicitlyUpdateSearchVisualizationAsync();
-            });
-        }
-        // BACKUP: Handle radius changes directly
-        else if (e.PropertyName == nameof(_viewModel.RadiusInMiles) && _viewModel.IsMapView && _viewModel.HasSearchLocation)
-        {
-            System.Diagnostics.Debug.WriteLine($"DashboardPage: BACKUP Radius changed to {_viewModel.RadiusInMiles} - FORCE UPDATING RADIUS");
-            Dispatcher.Dispatch(async () =>
-            {
-                await ExplicitlyUpdateSearchVisualizationAsync(); // Full redraw including radius
-            });
         }
         // LITERAL redraw every time user switches TO map view
         else if (e.PropertyName == nameof(_viewModel.IsMapView) && _viewModel.IsMapView)
@@ -183,6 +144,7 @@ public partial class DashboardPage : ContentPage
                 {
                     System.Diagnostics.Debug.WriteLine("DashboardPage: Has search location - EXPLICITLY UPDATING COMPLETE MAP");
                     await ExplicitlyUpdateSearchVisualizationAsync();
+
                 }
                 else
                 {
@@ -833,33 +795,14 @@ public partial class DashboardPage : ContentPage
                 return;
             }
 
-            // FORCE WebView readiness check with retries
-            int retryCount = 0;
-            bool webViewReady = false;
-            while (!webViewReady && retryCount < 3)
+            // FORCE WebView readiness check
+            if (!await IsWebViewReadyAsync())
             {
-                try
-                {
-                    await CourierMapWebView.EvaluateJavaScriptAsync("'ready'");
-                    webViewReady = true;
-                    System.Diagnostics.Debug.WriteLine($"DashboardPage: WebView is ready (attempt {retryCount + 1})");
-                }
-                catch (Exception ex)
-                {
-                    retryCount++;
-                    System.Diagnostics.Debug.WriteLine($"DashboardPage: WebView not ready (attempt {retryCount}): {ex.Message}");
-                    if (retryCount < 3)
-                    {
-                        await Task.Delay(500);
-                    }
-                }
-            }
-
-            if (!webViewReady)
-            {
-                System.Diagnostics.Debug.WriteLine("DashboardPage: WebView failed to become ready after 3 attempts - ABORTING");
+                System.Diagnostics.Debug.WriteLine("DashboardPage: WebView not ready - ABORTING SEARCH VISUALIZATION");
                 return;
             }
+
+            System.Diagnostics.Debug.WriteLine("DashboardPage: WebView is ready - proceeding with search visualization");
 
             // STEP 1: LITERALLY DELETE OLD SEARCH VISUALIZATION
             System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 1 - LITERALLY DELETING OLD SEARCH WAYPOINT AND RADIUS");
@@ -874,7 +817,7 @@ public partial class DashboardPage : ContentPage
                 System.Diagnostics.Debug.WriteLine($"DashboardPage: Error deleting old search visualization: {ex.Message}");
             }
 
-            // STEP 2: LITERALLY CREATE NEW SEARCH RADIUS FIRST (before waypoint)
+            // STEP 2: LITERALLY CREATE NEW SEARCH RADIUS
             System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 2 - LITERALLY CREATING NEW SEARCH RADIUS");
             var centerLat = _viewModel.SearchLatitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
             var centerLng = _viewModel.SearchLongitude.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
@@ -907,9 +850,9 @@ public partial class DashboardPage : ContentPage
                 System.Diagnostics.Debug.WriteLine($"DashboardPage: ERROR creating search waypoint: {ex.Message}");
             }
 
-            // STEP 4: LITERALLY REDRAW COURIER ICONS
-            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 4 - LITERALLY REDRAWING ALL COURIER ICONS");
-            await UpdateMapMarkersAsync();
+            // STEP 4: LITERALLY REDRAW COURIER ICONS WITH DIRECT DATA ACCESS
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 4 - LITERALLY REDRAWING COURIER ICONS WITH GUARANTEED DATA ACCESS");
+            await UpdateCourierMarkersWithDirectDataAsync();
 
             // STEP 5: LITERALLY FIT MAP TO SHOW SEARCH AREA AND COURIERS
             System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 5 - LITERALLY FITTING MAP TO SEARCH AREA AND COURIERS");
@@ -921,6 +864,74 @@ public partial class DashboardPage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine($"DashboardPage: CRITICAL ERROR in ExplicitlyUpdateSearchVisualizationAsync: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async Task UpdateCourierMarkersWithDirectDataAsync()
+    {
+        try
+        {
+            _mapRedrawCounter++;
+            System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE #{_mapRedrawCounter}: Starting with guaranteed data access");
+
+            // DIRECTLY access ViewModel data with multiple fallback sources
+            var couriersList = new List<object>();
+
+            // Try FilteredDeliveryPersons first
+            if (_viewModel.FilteredDeliveryPersons.Any())
+            {
+                couriersList = _viewModel.FilteredDeliveryPersons.Select(c => new
+                {
+                    c.Name,
+                    c.Surname,
+                    c.Phone,
+                    c.Zipcode,
+                    c.Latitude,
+                    c.Longitude,
+                    VehicleType = c.VehicleType,
+                    IsAvailable = c.IsAvailable
+                }).ToList<object>();
+                System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE: Using FilteredDeliveryPersons - {couriersList.Count} couriers");
+            }
+            // Fallback to DeliveryPersons if FilteredDeliveryPersons is empty
+            else if (_viewModel.DeliveryPersons.Any())
+            {
+                couriersList = _viewModel.DeliveryPersons.Select(c => new
+                {
+                    c.Name,
+                    c.Surname,
+                    c.Phone,
+                    c.Zipcode,
+                    c.Latitude,
+                    c.Longitude,
+                    VehicleType = c.VehicleType,
+                    IsAvailable = c.IsAvailable
+                }).ToList<object>();
+                System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE: Using DeliveryPersons fallback - {couriersList.Count} couriers");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("DIRECT COURIER UPDATE: No courier data available in either collection");
+            }
+
+            System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE: Found {couriersList.Count} couriers for map update");
+            foreach (var courier in couriersList)
+            {
+                var courierObj = courier as dynamic;
+                System.Diagnostics.Debug.WriteLine($"Courier: {courierObj.Name}, Lat: {courierObj.Latitude}, Lng: {courierObj.Longitude}, Vehicle: {courierObj.VehicleType}, Available: {courierObj.IsAvailable}");
+            }
+
+            var couriersJson = System.Text.Json.JsonSerializer.Serialize(couriersList);
+            System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE: Serialized JSON: {couriersJson}");
+
+            var script = $"if (window.updateCourierMarkers) {{ window.updateCourierMarkers({couriersJson}); }} else {{ console.error('updateCourierMarkers function not found'); }}";
+
+            var result = await CourierMapWebView.EvaluateJavaScriptAsync(script);
+            System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE: JavaScript executed successfully: {result}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"DIRECT COURIER UPDATE: Error: {ex.Message}");
         }
     }
 
@@ -936,6 +947,109 @@ public partial class DashboardPage : ContentPage
         if (_courierService != null)
         {
             _courierService.CouriersChanged -= OnCourierServiceChanged;
+        }
+    }
+
+    private void ScheduleDebouncedMapUpdate()
+    {
+        // Cancel any pending update
+        _mapUpdateCancellation?.Cancel();
+        _mapUpdateCancellation = new CancellationTokenSource();
+        
+        var cancellationToken = _mapUpdateCancellation.Token;
+        
+        // Schedule update with small delay to let all property changes complete
+        Dispatcher.Dispatch(async () =>
+        {
+            try
+            {
+                // Wait a bit for all property changes to complete
+                await Task.Delay(100, cancellationToken);
+                
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    await ExecuteSingleMapUpdate();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: Map update was cancelled (debounced)");
+            }
+        });
+    }
+
+    private async Task ExecuteSingleMapUpdate()
+    {
+        if (_isMapUpdateInProgress)
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardPage: Map update already in progress - skipping");
+            return;
+        }
+
+        try
+        {
+            _isMapUpdateInProgress = true;
+            System.Diagnostics.Debug.WriteLine("DashboardPage: EXECUTING SINGLE MAP UPDATE - No race conditions");
+            await ExplicitlyUpdateSearchVisualizationAsync();
+            System.Diagnostics.Debug.WriteLine("DashboardPage: SINGLE MAP UPDATE COMPLETED SUCCESSFULLY");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Error in ExecuteSingleMapUpdate: {ex.Message}");
+        }
+        finally
+        {
+            _isMapUpdateInProgress = false;
+        }
+    }
+
+    private async Task ClearSearchVisualizationAndShowAllCouriersAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardPage: CLEARING SEARCH VISUALIZATION AND SHOWING ALL COURIERS");
+
+            if (CourierMapWebView?.Source == null || !_viewModel.IsMapView)
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: WebView source is null or not in map view - SKIPPING");
+                return;
+            }
+
+            // FORCE WebView readiness check
+            if (!await IsWebViewReadyAsync())
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: WebView not ready - ABORTING");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine("DashboardPage: WebView is ready - proceeding with cleanup");
+
+            // STEP 1: CLEAR SEARCH RADIUS AND WAYPOINT
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 1 - CLEARING SEARCH RADIUS AND WAYPOINT");
+            try
+            {
+                var clearScript = "if (window.clearSearchRadius) { window.clearSearchRadius(); } else { console.error('clearSearchRadius function not found'); }";
+                var clearResult = await CourierMapWebView.EvaluateJavaScriptAsync(clearScript);
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: SEARCH VISUALIZATION CLEARED - Result: {clearResult}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DashboardPage: Error clearing search visualization: {ex.Message}");
+            }
+
+            // STEP 2: SHOW ALL COURIER MARKERS
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 2 - SHOWING ALL COURIER MARKERS");
+            await UpdateMapMarkersAsync();
+
+            // STEP 3: FIT MAP TO SHOW ALL COURIERS
+            System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 3 - FITTING MAP TO SHOW ALL COURIERS");
+            await FitMapToContentAsync();
+
+            System.Diagnostics.Debug.WriteLine("DashboardPage: SEARCH VISUALIZATION CLEARED AND ALL COURIERS DISPLAYED");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: ERROR in ClearSearchVisualizationAndShowAllCouriersAsync: {ex.Message}");
         }
     }
 }
