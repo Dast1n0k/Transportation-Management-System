@@ -180,7 +180,7 @@ public partial class DashboardPage : ContentPage
                 foreach (var courier in freshCouriersFromDb)
                 {
                     _viewModel.DeliveryPersons.Add(courier);
-                    _viewModel.FilteredDeliveryPersons.Add(courier);
+                    _viewModel.FilteredDeliveryPersons.Add(CourierViewModel.Create(courier));
                 }
             });
         }

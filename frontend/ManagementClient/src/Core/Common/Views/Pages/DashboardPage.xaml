@@ -3,6 +3,7 @@
              xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:converters="clr-namespace:ManagementClient.Core.Common.Converters"
+             xmlns:viewModels="clr-namespace:ManagementClient.Core.Common.ViewModels"
              x:Name="DashboardPageRoot"
              Title="{Binding Title}"
              Style="{StaticResource BasePageStyle}">
@@ -32,16 +33,16 @@
 
         <!-- Main Content -->
         <Grid Grid.Row="1"
-              ColumnDefinitions="280,*">
+              ColumnDefinitions="420,*">
 
-            <!-- Sidebar with right border -->
+            <!-- Sidebar with right border - Made wider for better courier cards -->
             <Grid Grid.Column="0" BackgroundColor="{DynamicResource SurfaceBackgroundColor}">
 
                 <ScrollView Padding="20">
-                    <StackLayout Spacing="20">
+                    <StackLayout Spacing="8">
 
                         <!-- Search Section -->
-                        <StackLayout Spacing="12">
+                        <StackLayout Spacing="8">
                             <Label Text="Search Deliveries"
                                    Style="{StaticResource SubtitleLabelStyle}"/>
 
@@ -90,69 +91,162 @@
                             <CollectionView ItemsSource="{Binding FilteredDeliveryPersons}"
                                             Style="{StaticResource BaseCollectionViewStyle}">
                                 <CollectionView.ItemTemplate>
-                                    <DataTemplate>
+                                    <DataTemplate x:DataType="viewModels:CourierViewModel">
                                         <Border Style="{StaticResource CardBorderStyle}"
-                                                Margin="0,4">
-                                            <Grid Padding="12"
-                                                  ColumnDefinitions="Auto,*,Auto,Auto"
-                                                  RowDefinitions="Auto,Auto,Auto"
-                                                  RowSpacing="6">
+                                                Margin="0,8"
+                                                Padding="0">
+                                            <Grid Padding="16"
+                                                  ColumnDefinitions="Auto,*,Auto"
+                                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                                  RowSpacing="2">
 
-                                                <!-- Vehicle Icon -->
-                                                <Label Grid.Column="0" Grid.RowSpan="3"
-                                                       Text="{Binding VehicleIcon}"
-                                                       FontSize="28"
-                                                       VerticalOptions="Center"
-                                                       Margin="0,0,12,0"/>
+                                                <!-- Vehicle Icon - Clean and professional with transparent background -->
+                                                <Border Grid.Column="0" Grid.RowSpan="8"
+                                                        BackgroundColor="Transparent"
+                                                        Stroke="Transparent"
+                                                        StrokeThickness="0"
+                                                        WidthRequest="55"
+                                                        HeightRequest="55"
+                                                        VerticalOptions="Start"
+                                                        Margin="0,0,14,0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding VehicleIcon}"
+                                                           FontSize="32"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"/>
+                                                </Border>
 
-                                                <!-- Name and Location -->
-                                                <StackLayout Grid.Column="1" Grid.Row="0" 
-                                                           VerticalOptions="Center">
-                                                    <Label Text="{Binding Name}"
-                                                           Style="{StaticResource BodyLabelStyle}"
-                                                           FontAttributes="Bold"
-                                                           FontSize="16"
-                                                           Margin="0"/>
-                                                    <Label Text="{Binding Location, StringFormat='📍 {0}'}"
+                                                <!-- Row 1: Full Name and Status Badge -->
+                                                <Grid Grid.Column="1" Grid.Row="0" 
+                                                      ColumnDefinitions="*,Auto"
+                                                      Margin="0,0,0,4">
+                                                    <StackLayout Grid.Column="0" 
+                                                                 Orientation="Horizontal" 
+                                                                 Spacing="4"
+                                                                 VerticalOptions="Center">
+                                                        <Label Text="{Binding Name}"
+                                                               Style="{StaticResource BodyLabelStyle}"
+                                                               FontAttributes="Bold"
+                                                               FontSize="17"
+                                                               TextColor="#f8f8ff"
+                                                               LineBreakMode="TailTruncation"/>
+                                                        <Label Text="{Binding Surname}"
+                                                               Style="{StaticResource BodyLabelStyle}"
+                                                               FontAttributes="Bold"
+                                                               FontSize="17"
+                                                               TextColor="#f8f8ff"
+                                                               LineBreakMode="TailTruncation"/>
+                                                    </StackLayout>
+
+                                                    <Border Grid.Column="1"
+                                                            BackgroundColor="{Binding StatusColorBrush}"
+                                                            Padding="6,3"
+                                                            Margin="4,0,0,0">
+                                                        <Border.StrokeShape>
+                                                            <RoundRectangle CornerRadius="10"/>
+                                                        </Border.StrokeShape>
+                                                        <Label Text="{Binding StatusText}"
+                                                               TextColor="White"
+                                                               FontSize="10"
+                                                               FontAttributes="Bold"
+                                                               HorizontalOptions="Center"/>
+                                                    </Border>
+                                                </Grid>
+
+                                                <!-- Row 2: Location -->
+                                                <Label Grid.Column="1" Grid.Row="1"
+                                                       Text="{Binding Location}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontSize="14"
+                                                       TextColor="#f8f8ff"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="WordWrap"
+                                                       Margin="0,0,0,2"/>
+
+                                                <!-- Row 3: Phone -->
+                                                <Label Grid.Column="1" Grid.Row="2"
+                                                       Text="{Binding Phone, StringFormat='Phone: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontSize="13"
+                                                       TextColor="#f8f8ff"
+                                                       Margin="0,0,0,2"/>
+
+                                                <!-- Row 4: Zipcode -->
+                                                <Label Grid.Column="1" Grid.Row="3"
+                                                       Text="{Binding Zipcode, StringFormat='Zip: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontSize="13"
+                                                       TextColor="#f8f8ff"
+                                                       Margin="0,0,0,2"/>
+
+                                                <!-- Row 5: Distance -->
+                                                <Label Grid.Column="1" Grid.Row="4"
+                                                       Text="{Binding DistanceFromSearch, StringFormat='Distance: {0:F1} miles'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontSize="13"
+                                                       TextColor="#f8f8ff"
+                                                       FontAttributes="Bold"
+                                                       Margin="0,0,0,0"/>
+
+                                                <!-- Row 6: Capacity -->
+                                                <Label Grid.Column="1" Grid.Row="5"
+                                                       Text="{Binding Capacity, StringFormat='Capacity: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontSize="13"
+                                                       TextColor="#f8f8ff"
+                                                       Margin="0,0,0,2"/>
+
+                                                <!-- Row 7: Dimensions -->
+                                                <Label Grid.Column="1" Grid.Row="6"
+                                                       Text="{Binding Dimensions, StringFormat='Dimensions: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontSize="13"
+                                                       TextColor="#f8f8ff"
+                                                       Margin="0,0,0,2"/>
+
+                                                <!-- Row 8: Notes (conditionally visible) -->
+                                                <Border Grid.Column="1" Grid.Row="7"
+                                                        BackgroundColor="#fff3cd"
+                                                        Stroke="#ffc107"
+                                                        StrokeThickness="1"
+                                                        Padding="8,6"
+                                                        Margin="0,4,0,0"
+                                                        IsVisible="{Binding Notes, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="6"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding Notes, StringFormat='Note: {0}'}"
                                                            Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"
-                                                           Margin="0,2,0,0"/>
-                                                </StackLayout>
+                                                           FontSize="12"
+                                                           TextColor="#856404"
+                                                           FontAttributes="Italic"
+                                                           LineBreakMode="WordWrap"/>
+                                                </Border>
 
-                                                <!-- Capacity Info (removed vehicle type) -->
-                                                <StackLayout Grid.Column="1" Grid.Row="1" 
-                                                           Orientation="Horizontal"
-                                                           Spacing="12"
-                                                           Margin="0,4,0,0">
-                                                    <Label Text="{Binding Capacity, StringFormat='📦 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="12"/>
-                                                </StackLayout>
-
-                                                <!-- Dimensions and Phone -->
-                                                <StackLayout Grid.Column="1" Grid.Row="2" 
-                                                           Orientation="Horizontal"
-                                                           Spacing="12"
-                                                           Margin="0,2,0,0">
-                                                    <Label Text="{Binding Dimensions, StringFormat='📏 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="12"/>
-                                                    <Label Text="{Binding Phone, StringFormat='📞 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="12"/>
-                                                </StackLayout>
-
-                                                <!-- Copy Button -->
-                                                <Button Grid.Column="3" Grid.Row="0" Grid.RowSpan="3"
-                                                        Text="📋"
-                                                        Command="{Binding BindingContext.CopyCourierDataCommand, Source={x:Reference Name=DashboardPageRoot}}"
-                                                        CommandParameter="{Binding .}"
-                                                        Style="{StaticResource PrimaryButtonStyle}"
-                                                        FontSize="14"
-                                                        WidthRequest="40"
-                                                        HeightRequest="40"
-                                                        Padding="0"
-                                                        VerticalOptions="Center"/>
+                                                <!-- Enhanced Copy Button -->
+                                                <Border Grid.Column="2" Grid.Row="0" Grid.RowSpan="8"
+                                                        BackgroundColor="#007bff"
+                                                        Stroke="#0056b3"
+                                                        StrokeThickness="1"
+                                                        WidthRequest="45"
+                                                        HeightRequest="45"
+                                                        VerticalOptions="Start"
+                                                        Margin="8,0,0,0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding BindingContext.CopyCourierDataCommand, Source={x:Reference Name=DashboardPageRoot}}"
+                                                                              CommandParameter="{Binding .}"/>
+                                                    </Border.GestureRecognizers>
+                                                    <Label Text="📋"
+                                                           FontSize="18"
+                                                           TextColor="White"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"/>
+                                                </Border>
 
                                             </Grid>
                                         </Border>
@@ -160,8 +254,6 @@
                                 </CollectionView.ItemTemplate>
                             </CollectionView>
                         </StackLayout>
-
-                        <!-- Remove the "Enter zipcode" message completely -->
 
                     </StackLayout>
                 </ScrollView>
@@ -247,7 +339,7 @@
                                     </CollectionView.ItemsLayout>
 
                                     <CollectionView.ItemTemplate>
-                                        <DataTemplate>
+                                        <DataTemplate x:DataType="viewModels:CourierViewModel">
                                             <Border Style="{StaticResource CardBorderStyle}">
                                                 <StackLayout Spacing="12">
 
@@ -279,7 +371,16 @@
                                                     <StackLayout Spacing="4">
                                                         <Label Text="{Binding Phone}"
                                                                Style="{StaticResource CaptionLabelStyle}"/>
-                                                        <Label Text="{Binding Location, StringFormat='📍 {0}'}"
+                                                        <Label Text="{Binding Location}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding Zipcode, StringFormat='Zip: {0}'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding DistanceFromSearch, StringFormat='Distance: {0:F1} miles'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"
+                                                               IsVisible="{Binding HasDistanceFromSearch}"/>
+                                                        <Label Text="{Binding Capacity, StringFormat='Capacity: {0}'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding Dimensions, StringFormat='Dimensions: {0}'}"
                                                                Style="{StaticResource CaptionLabelStyle}"/>
                                                     </StackLayout>
 
@@ -290,14 +391,14 @@
                                                         <Button Grid.Column="0"
                                                                 Text="Edit"
                                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditDeliveryPersonCommand}"
-                                                                CommandParameter="{Binding}"
+                                                                CommandParameter="{Binding Courier}"
                                                                 Style="{StaticResource SecondaryButtonStyle}"
                                                                 FontSize="12"/>
 
                                                         <Button Grid.Column="1"
                                                                 Text="Delete"
                                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteDeliveryPersonCommand}"
-                                                                CommandParameter="{Binding}"
+                                                                CommandParameter="{Binding Courier}"
                                                                 Style="{StaticResource DangerButtonStyle}"
                                                                 FontSize="12"/>
                                                     </Grid>

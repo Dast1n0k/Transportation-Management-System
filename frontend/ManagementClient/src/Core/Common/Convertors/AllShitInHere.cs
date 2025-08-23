@@ -118,7 +118,7 @@ public class VehicleTypeToEmojiConverter : IValueConverter
             "sprinter" => "🚐",           // Van/Sprinter
             "straight_small" => "🚚",     // Small truck
             "straight_large" => "🚛",     // Large truck
-            _ => "🚚"                     // Default truck
+            _ => "❓"                     // Default truck
         };
     }
 
