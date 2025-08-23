@@ -10,6 +10,12 @@ def format_courier_response(courier_data):
 
     formatted = dict(courier_data)
 
+    print(courier_data)
+    print(formatted['location'])
+
+    if ('location' in formatted and formatted['location']):
+        formatted['location'] = formatted['location'].strip()
+
     # Format boolean values
     if 'is_available' in formatted:
         formatted['is_available'] = bool(formatted['is_available'])

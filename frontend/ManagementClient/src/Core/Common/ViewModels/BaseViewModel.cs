@@ -47,22 +47,20 @@ public abstract class BaseViewModel : INotifyPropertyChanged
         if (IsBusy)
             return;
 
-        IsBusy = true;
-        await operation();
-
-        // try
-        // {
-        //     IsBusy = true;
-        //     await operation();
-        // }
-        // catch
-        // {
-        //     // await HandleErrorAsync(ex, operationName);
-        // }
-        // finally
-        // {
-        //     IsBusy = false;
-        // }
+        try
+        {
+            IsBusy = true;
+            await operation();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+            // You can add error handling here if needed
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     protected virtual async Task<T?> ExecuteAsync<T>(Func<Task<T>> operation, [CallerMemberName] string? operationName = null)
@@ -70,23 +68,20 @@ public abstract class BaseViewModel : INotifyPropertyChanged
         if (IsBusy)
             return default;
 
-        IsBusy = true;
-        return await operation();
-
-        // try
-        // {
-        //     IsBusy = true;
-        //     return await operation();
-        // }
-        // catch
-        // {
-        //     // await HandleErrorAsync(ex, operationName);
-        //     return default;
-        // }
-        // finally
-        // {
-        //     IsBusy = false;
-        // }
+        try
+        {
+            IsBusy = true;
+            return await operation();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+            return default;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     // protected virtual async Task HandleErrorAsync(Exception exception, string? operationName)

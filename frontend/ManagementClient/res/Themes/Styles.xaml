@@ -51,7 +51,7 @@
         <Style x:Key="BodyLabelStyle"
                         TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="14"/>
+                                Value="12"/> <!-- Reduced from 14 -->
                 <Setter Property="TextColor"
                                 Value="{DynamicResource PrimaryTextColor}"/>
         </Style>
@@ -59,7 +59,7 @@
         <Style x:Key="CaptionLabelStyle"
                         TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="12"/>
+                                Value="9"/> <!-- Reduced from 12 -->
                 <Setter Property="TextColor"
                                 Value="{DynamicResource SecondaryTextColor}"/>
         </Style>
@@ -196,9 +196,9 @@
                 <Setter Property="StrokeShape"
                                 Value="RoundRectangle 8"/>
                 <Setter Property="Padding"
-                                Value="16"/>
+                                Value="8"/> <!-- Reduced from 16 -->
                 <Setter Property="Margin"
-                                Value="8"/>
+                                Value="0,2"/> <!-- Reduced from 8 -->
         </Style>
 
         <Style x:Key="ModalBorderStyle"

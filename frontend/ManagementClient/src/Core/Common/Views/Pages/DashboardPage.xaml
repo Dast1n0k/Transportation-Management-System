@@ -72,8 +72,9 @@
                                     Margin="0,10,0,0"/>
                         </StackLayout>
 
-                        <!-- Search Results -->
-                        <StackLayout Spacing="12">
+                        <!-- Search Results - ONLY VISIBLE AFTER SEARCH -->
+                        <StackLayout Spacing="12" 
+                                     IsVisible="{Binding HasPerformedSearch}">
                             <Label Text="Available Couriers"
                                    Style="{StaticResource SubtitleLabelStyle}"/>
 
@@ -83,81 +84,75 @@
                                     <DataTemplate>
                                         <Border Style="{StaticResource CardBorderStyle}"
                                                 Margin="0,4">
-                                            <StackLayout Spacing="8"
-                                                         Padding="12">
+                                            <Grid Padding="12"
+                                                  ColumnDefinitions="Auto,*,Auto,Auto"
+                                                  RowDefinitions="Auto,Auto,Auto"
+                                                  RowSpacing="6">
 
-                                                <!-- Header with Name, Status and Copy Button -->
-                                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                                    <Label Grid.Column="0"
-                                                           Text="{Binding VehicleIcon}"
-                                                           FontSize="24"
-                                                           VerticalOptions="Center"
-                                                           Margin="0,0,10,0"/>
+                                                <!-- Vehicle Icon -->
+                                                <Label Grid.Column="0" Grid.RowSpan="3"
+                                                       Text="{Binding VehicleIcon}"
+                                                       FontSize="28"
+                                                       VerticalOptions="Center"
+                                                       Margin="0,0,12,0"/>
 
-                                                    <StackLayout Grid.Column="1" VerticalOptions="Center">
-                                                        <Label Text="{Binding Name}"
-                                                               Style="{StaticResource BodyLabelStyle}"
-                                                               FontAttributes="Bold"
-                                                               FontSize="16"/>
-                                                        <Label Text="{Binding StatusText}"
-                                                               Style="{StaticResource CaptionLabelStyle}"
-                                                               FontSize="12"
-                                                               TextColor="{Binding StatusColor}"/>
-                                                    </StackLayout>
+                                                <!-- Name and Location -->
+                                                <StackLayout Grid.Column="1" Grid.Row="0" 
+                                                           VerticalOptions="Center">
+                                                    <Label Text="{Binding Name}"
+                                                           Style="{StaticResource BodyLabelStyle}"
+                                                           FontAttributes="Bold"
+                                                           FontSize="16"
+                                                           Margin="0"/>
+                                                    <Label Text="{Binding Location, StringFormat='📍 {0}'}"
+                                                           Style="{StaticResource CaptionLabelStyle}"
+                                                           FontSize="13"
+                                                           Margin="0,2,0,0"/>
+                                                </StackLayout>
 
-                                                    <Ellipse Grid.Column="2"
-                                                             Fill="{Binding StatusColor}"
-                                                             WidthRequest="14"
-                                                             HeightRequest="14"
-                                                             VerticalOptions="Center"
-                                                             Margin="0,0,10,0"/>
+                                                <!-- Capacity Info (removed vehicle type) -->
+                                                <StackLayout Grid.Column="1" Grid.Row="1" 
+                                                           Orientation="Horizontal"
+                                                           Spacing="12"
+                                                           Margin="0,4,0,0">
+                                                    <Label Text="{Binding Capacity, StringFormat='📦 {0}'}"
+                                                           Style="{StaticResource CaptionLabelStyle}"
+                                                           FontSize="12"/>
+                                                </StackLayout>
 
-                                                    <Button Grid.Column="3"
-                                                            Text="📋"
-                                                            Command="{Binding CopyCourierDataCommand, Source={x:Reference Name=DashboardPageRoot}}"
-                                                            CommandParameter="{Binding .}"
-                                                            Style="{StaticResource PrimaryButtonStyle}"
-                                                            FontSize="16"
-                                                            WidthRequest="40"
-                                                            HeightRequest="40"
-                                                            Padding="0"
-                                                            VerticalOptions="Center"/>
-                                                </Grid>
+                                                <!-- Dimensions and Phone -->
+                                                <StackLayout Grid.Column="1" Grid.Row="2" 
+                                                           Orientation="Horizontal"
+                                                           Spacing="12"
+                                                           Margin="0,2,0,0">
+                                                    <Label Text="{Binding Dimensions, StringFormat='📏 {0}'}"
+                                                           Style="{StaticResource CaptionLabelStyle}"
+                                                           FontSize="12"/>
+                                                    <Label Text="{Binding Phone, StringFormat='📞 {0}'}"
+                                                           Style="{StaticResource CaptionLabelStyle}"
+                                                           FontSize="12"/>
+                                                </StackLayout>
 
-                                                <!-- Detailed Info -->
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="4">
-                                                    <Label Grid.Column="0" Grid.Row="0"
-                                                           Text="{Binding Phone, StringFormat='📞 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"/>
-                                                    <Label Grid.Column="1" Grid.Row="0"
-                                                           Text="{Binding Location, StringFormat='📍 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"/>
-                                                    <Label Grid.Column="0" Grid.Row="1"
-                                                           Text="{Binding Zipcode, StringFormat='📮 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"/>
-                                                    <Label Grid.Column="1" Grid.Row="1"
-                                                           Text="{Binding VehicleType, StringFormat='🚚 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"/>
-                                                    <Label Grid.Column="0" Grid.Row="2"
-                                                           Text="{Binding Capacity, StringFormat='📦 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"/>
-                                                    <Label Grid.Column="1" Grid.Row="2"
-                                                           Text="{Binding Dimensions, StringFormat='📏 {0}'}"
-                                                           Style="{StaticResource CaptionLabelStyle}"
-                                                           FontSize="13"/>
-                                                </Grid>
+                                                <!-- Copy Button -->
+                                                <Button Grid.Column="3" Grid.Row="0" Grid.RowSpan="3"
+                                                        Text="📋"
+                                                        Command="{Binding BindingContext.CopyCourierDataCommand, Source={x:Reference Name=DashboardPageRoot}}"
+                                                        CommandParameter="{Binding .}"
+                                                        Style="{StaticResource PrimaryButtonStyle}"
+                                                        FontSize="14"
+                                                        WidthRequest="40"
+                                                        HeightRequest="40"
+                                                        Padding="0"
+                                                        VerticalOptions="Center"/>
 
-                                            </StackLayout>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </CollectionView.ItemTemplate>
                             </CollectionView>
                         </StackLayout>
+
+                        <!-- Remove the "Enter zipcode" message completely -->
 
                     </StackLayout>
                 </ScrollView>

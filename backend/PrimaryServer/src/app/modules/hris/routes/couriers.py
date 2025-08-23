@@ -205,7 +205,7 @@ def search_couriers_by_zipcode():
 
     try:
         radius = float(radius)
-        if radius <= 0 or radius > 500:  # Reasonable limits
+        if radius <= 0 or radius > 600:  # Reasonable limits
             return jsonify({
                 'error': 'radius must be between 1 and 500 miles',
                 'code': CourierErrorCodes.VALIDATION_ERROR

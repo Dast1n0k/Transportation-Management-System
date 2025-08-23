@@ -31,6 +31,23 @@ public class DashboardViewModel : BaseViewModel
     private double _searchLongitude = -98.5795;
     private bool _hasSearchLocation = false;
 
+    private bool _hasPerformedSearch = false;
+    
+    // Add this property to force map updates
+    private bool _forceMapUpdate = false;
+
+    public bool HasPerformedSearch
+    {
+        get => _hasPerformedSearch;
+        set => SetProperty(ref _hasPerformedSearch, value);
+    }
+
+    public bool ForceMapUpdate
+    {
+        get => _forceMapUpdate;
+        set => SetProperty(ref _forceMapUpdate, value);
+    }
+
     public DashboardViewModel(
         ICourierService courierService,
         IAuthService authService,
@@ -55,7 +72,8 @@ public class DashboardViewModel : BaseViewModel
         DeleteDeliveryPersonCommand = new RelayCommand<Courier>(
             async person => await DeleteDeliveryPersonAsync(person)
         );
-        CopyCourierDataCommand = new RelayCommand<Courier>(async courier => await CopyCourierDataAsync(courier));
+        // Keep as RelayCommand<Courier> but fix the async handling
+        CopyCourierDataCommand = new RelayCommand<Courier>(courier => _ = CopyCourierDataAsync(courier));
 
         _courierService.CouriersChanged += (s, e) =>
         {
@@ -152,13 +170,25 @@ public class DashboardViewModel : BaseViewModel
 
     public async Task InitializeAsync()
     {
-        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync called - FORCING DATABASE REFRESH");
+        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync called - NO COURIERS VISIBLE UNTIL SEARCH");
 
-        // ALWAYS force fresh data from database when initializing dashboard
+        // Load couriers into DeliveryPersons for searching, but keep FilteredDeliveryPersons EMPTY
         await _courierService.RefreshCouriersAsync();
-        await LoadDeliveryPersonsAsync();
+        
+        // Load data into DeliveryPersons but DON'T call LoadDeliveryPersonsAsync
+        // because it might populate FilteredDeliveryPersons
+        var couriers = await _courierService.GetCouriersAsync();
+        DeliveryPersons.Clear();
+        foreach (var courier in couriers)
+        {
+            DeliveryPersons.Add(courier);
+        }
 
-        System.Diagnostics.Debug.WriteLine("DashboardViewModel: InitializeAsync completed with fresh database data");
+        // ENSURE filtered results are EMPTY - NO COURIERS VISIBLE
+        FilteredDeliveryPersons.Clear();
+        HasPerformedSearch = false;
+
+        System.Diagnostics.Debug.WriteLine($"DashboardViewModel: InitializeAsync completed - DeliveryPersons: {DeliveryPersons.Count}, FilteredDeliveryPersons: {FilteredDeliveryPersons.Count} (HIDDEN)");
     }
 
     public async Task LoadDeliveryPersonsAsync()
@@ -166,35 +196,23 @@ public class DashboardViewModel : BaseViewModel
         System.Diagnostics.Debug.WriteLine("DashboardViewModel: LoadDeliveryPersonsAsync called");
         await ExecuteAsync(async () =>
         {
-            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Calling CourierService.GetCouriersAsync()");
             var couriers = await _courierService.GetCouriersAsync();
-            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Received {couriers?.Count() ?? 0} couriers from service");
-
-            // Force complete collection refresh
-            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Clearing collections completely");
+            
+            // Only populate DeliveryPersons - NEVER FilteredDeliveryPersons
             DeliveryPersons.Clear();
-            FilteredDeliveryPersons.Clear();
-
-            // Add fresh data
             foreach (var courier in couriers)
             {
                 DeliveryPersons.Add(courier);
-                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Added courier ID={courier.Id}, Name={courier.Name}, Vehicle={courier.VehicleType}, Available={courier.IsAvailable}");
             }
 
-            foreach (var courier in DeliveryPersons)
-            {
-                FilteredDeliveryPersons.Add(courier);
-                System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Added courier {courier.Name} to FilteredDeliveryPersons");
-            }
-
-            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Final counts - DeliveryPersons: {DeliveryPersons.Count}, FilteredDeliveryPersons: {FilteredDeliveryPersons.Count}");
+            // DO NOT TOUCH FilteredDeliveryPersons AT ALL
+            System.Diagnostics.Debug.WriteLine($"LoadDeliveryPersonsAsync: DeliveryPersons: {DeliveryPersons.Count}, FilteredDeliveryPersons: {FilteredDeliveryPersons.Count} (KEPT EMPTY)");
 
             OnPropertyChanged(nameof(ActiveDeliveryCount));
             OnPropertyChanged(nameof(BusyDeliveryCount));
             OnPropertyChanged(nameof(OfflineDeliveryCount));
             OnPropertyChanged(nameof(DeliveryPersons));
-            OnPropertyChanged(nameof(FilteredDeliveryPersons));
+            // NEVER trigger FilteredDeliveryPersons here
         });
     }
 
@@ -244,44 +262,75 @@ public class DashboardViewModel : BaseViewModel
 
                 if (searchResult != null && searchResult.Geocoding != null)
                 {
+                    // STEP 1: EXPLICITLY SET SEARCH LOCATION DATA (ALWAYS, REGARDLESS OF COURIER RESULTS)
                     SearchLatitude = searchResult.Geocoding.Coordinates.Lat;
                     SearchLongitude = searchResult.Geocoding.Coordinates.Lng;
                     HasSearchLocation = true;
+                    HasPerformedSearch = true;
 
-                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Geocoding successful - Lat: {SearchLatitude}, Lng: {SearchLongitude}");
-                    // System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Found {searchResult.TotalFound} couriers in {searchResult.SearchRadiusMiles} miles");
+                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: EXPLICIT GEOCODING SUCCESS - Lat: {SearchLatitude}, Lng: {SearchLongitude}");
+                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SEARCH LOCATION SET - WILL TRIGGER EXPLICIT WAYPOINT AND RADIUS DISPLAY");
 
-                    // Update the courier lists with the search results
+                    // STEP 2: TRIGGER EXPLICIT SEARCH VISUALIZATION IMMEDIATELY
+                    OnPropertyChanged(nameof(SearchLatitude));
+                    OnPropertyChanged(nameof(SearchLongitude));
+                    OnPropertyChanged(nameof(HasSearchLocation)); // This triggers the backup visualization
+
+                    // STEP 3: UPDATE COURIER COLLECTIONS (EVEN IF EMPTY)
                     DeliveryPersons.Clear();
                     FilteredDeliveryPersons.Clear();
 
-                    if (searchResult.Couriers != null)
+                    if (searchResult.Couriers != null && searchResult.Couriers.Any())
                     {
                         foreach (var courier in searchResult.Couriers)
                         {
                             DeliveryPersons.Add(courier);
                             FilteredDeliveryPersons.Add(courier);
                         }
+                        System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Found {searchResult.Couriers.Count()} couriers");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("DashboardViewModel: NO COURIERS FOUND - BUT WAYPOINT AND RADIUS WILL STILL BE DISPLAYED");
                     }
 
-                    // Notify that search location has been updated
-                    OnPropertyChanged(nameof(SearchLatitude));
-                    OnPropertyChanged(nameof(SearchLongitude));
-                    OnPropertyChanged(nameof(HasSearchLocation));
+                    // STEP 4: TRIGGER ALL OTHER PROPERTY NOTIFICATIONS
+                    OnPropertyChanged(nameof(HasPerformedSearch));
                     OnPropertyChanged(nameof(DeliveryPersons));
                     OnPropertyChanged(nameof(FilteredDeliveryPersons));
+                    OnPropertyChanged(nameof(RadiusInMiles));
 
-                    await _dialogService.ShowAlertAsync("Search Complete",
-                        $"Found {searchResult.TotalFound} couriers within {RadiusInMiles} miles of {ZipCode}\n" +
-                        $"Location: {searchResult.Geocoding.City}, {searchResult.Geocoding.State}");
+                    // STEP 5: EXPLICITLY FORCE COMPLETE MAP UPDATE
+                    ForceMapUpdate = !ForceMapUpdate; // Toggle to always trigger change
+                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: EXPLICIT FORCE MAP UPDATE TRIGGERED - ForceMapUpdate: {ForceMapUpdate}");
+
+                    System.Diagnostics.Debug.WriteLine($"DashboardViewModel: SEARCH COMPLETED - EXPLICITLY TRIGGERING MAP UPDATES (WAYPOINT AND RADIUS WILL BE SHOWN REGARDLESS OF COURIER RESULTS)");
                 }
                 else
                 {
+                    // Reset search state if geocoding failed
+                    HasSearchLocation = false;
+                    HasPerformedSearch = false;
+                    FilteredDeliveryPersons.Clear();
+                    
+                    OnPropertyChanged(nameof(HasSearchLocation));
+                    OnPropertyChanged(nameof(HasPerformedSearch));
+                    OnPropertyChanged(nameof(FilteredDeliveryPersons));
+                    
                     await _dialogService.ShowAlertAsync("Geocoding Error", "Could not find location for the provided zip code.");
                 }
             }
             catch (Exception ex)
             {
+                // Reset search state on error
+                HasSearchLocation = false;
+                HasPerformedSearch = false;
+                FilteredDeliveryPersons.Clear();
+                
+                OnPropertyChanged(nameof(HasSearchLocation));
+                OnPropertyChanged(nameof(HasPerformedSearch));
+                OnPropertyChanged(nameof(FilteredDeliveryPersons));
+                
                 System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Error in SearchZipcodeAsync: {ex.Message}");
                 await _dialogService.ShowAlertAsync("Error", $"Failed to search for couriers: {ex.Message}");
             }
@@ -333,14 +382,24 @@ public class DashboardViewModel : BaseViewModel
 
     private async Task CopyCourierDataAsync(Courier? courier)
     {
-        if (courier == null) return;
+        System.Diagnostics.Debug.WriteLine($"DashboardViewModel: CopyCourierDataAsync called with courier: {courier?.Name ?? "null"}");
+        
+        if (courier == null) 
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Courier is null, returning");
+            return;
+        }
 
         try
         {
-            var formattedData = FormatCourierData(courier);
-            await Clipboard.SetTextAsync(formattedData);
+            var formattedData = FormatCourierDataForClipboard(courier);
+            
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Attempting to copy: {formattedData}");
+            
+            // Use the proper MAUI clipboard API
+            await Clipboard.Default.SetTextAsync(formattedData);
 
-            await _dialogService.ShowAlertAsync("Copied!", "Courier data has been copied to clipboard.");
+            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Successfully copied to clipboard");
         }
         catch (Exception ex)
         {
@@ -349,32 +408,50 @@ public class DashboardViewModel : BaseViewModel
         }
     }
 
-    private string FormatCourierData(Courier courier)
+    private string FormatCourierDataForClipboard(Courier courier)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("=== COURIER INFORMATION ===");
-        sb.AppendLine($"Name: {courier.Name} {courier.Surname}");
-        sb.AppendLine($"Phone: {courier.Phone}");
-        sb.AppendLine($"Location: {courier.Location}");
-        sb.AppendLine($"Zipcode: {courier.Zipcode}");
-        sb.AppendLine($"Vehicle Type: {courier.VehicleType}");
-        sb.AppendLine($"Capacity: {courier.Capacity}");
-        sb.AppendLine($"Dimensions: {courier.Dimensions}");
-        sb.AppendLine($"Available: {(courier.IsAvailable ? "Yes" : "No")}");
-
-        if (courier.Latitude != 0 && courier.Longitude != 0)
+        // Calculate distance from search location to courier
+        var distanceText = "N/A";
+        if (HasSearchLocation && courier.Latitude != 0 && courier.Longitude != 0)
         {
-            sb.AppendLine($"Coordinates: {courier.Latitude:F6}, {courier.Longitude:F6}");
+            var distance = CalculateDistance(SearchLatitude, SearchLongitude, courier.Latitude, courier.Longitude);
+            distanceText = $"{distance:F1} miles";
         }
 
-        if (!string.IsNullOrEmpty(courier.Notes))
-        {
-            sb.AppendLine($"Notes: {courier.Notes}");
-        }
+        // Format as requested:
+        // Line 1: zipcode, address, distance from target point
+        // Line 2: dimensions  
+        // Line 3: rate
+        var line1 = $"{courier.Zipcode}, {courier.Location}, {distanceText}";
+        var line2 = courier.Dimensions ?? "N/A";
+        var line3 = $"Rate: {courier.Capacity ?? "N/A"}";
 
-        sb.AppendLine("========================");
+        var result = $"{line1}\n{line2}\n{line3}";
+        
+        System.Diagnostics.Debug.WriteLine($"Formatted clipboard data: {result}");
+        return result;
+    }
 
-        return sb.ToString();
+    private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        // Haversine formula to calculate distance in miles
+        const double earthRadiusMiles = 3959;
+        
+        var dLat = DegreesToRadians(lat2 - lat1);
+        var dLon = DegreesToRadians(lon2 - lon1);
+        
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        
+        return earthRadiusMiles * c;
+    }
+
+    private double DegreesToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180;
     }
 
     private async Task LogoutAsync()
@@ -406,17 +483,24 @@ public class DashboardViewModel : BaseViewModel
     {
         await ExecuteAsync(async () =>
         {
-            System.Diagnostics.Debug.WriteLine("DashboardViewModel: Switching to map view - FORCING DATABASE REFRESH");
-
-            // ALWAYS fetch fresh data from database - no caching allowed
-            System.Diagnostics.Debug.WriteLine("DashboardViewModel: FORCING fresh server fetch for map view");
+            // Refresh data but DON'T show in sidebar list unless search was performed
             await _courierService.RefreshCouriersAsync();
-            await LoadDeliveryPersonsAsync();
+            
+            var couriers = await _courierService.GetCouriersAsync();
+            DeliveryPersons.Clear();
+            foreach (var courier in couriers)
+            {
+                DeliveryPersons.Add(courier);
+            }
 
-            // Set map view (this will trigger map redraw with fresh database data)
+            // KEEP FilteredDeliveryPersons EMPTY unless search was performed
+            if (!HasPerformedSearch)
+            {
+                FilteredDeliveryPersons.Clear();
+            }
+
             IsMapView = true;
-
-            System.Diagnostics.Debug.WriteLine($"DashboardViewModel: Map view activated with {FilteredDeliveryPersons.Count} fresh couriers from database");
+            System.Diagnostics.Debug.WriteLine($"SwitchToMapViewAsync: FilteredDeliveryPersons kept at {FilteredDeliveryPersons.Count} (search performed: {HasPerformedSearch})");
         });
     }
 

@@ -11,10 +11,43 @@ from app.modules.hris.constants import (
     SearchSettings,
     VehicleTypes
 )
+from app.modules.map.services import ZipCodeService
 
 
 def create_courier_profile(user_id, courier_data):
     """Creates courier profile"""
+    
+    # Get location information from zipcode if not provided
+    location = ''
+    zipcode = courier_data.get('zipcode')
+    
+    # If location is not provided but zipcode is, automatically generate location
+    try:
+        zip_service = ZipCodeService()
+        zipcode_info = zip_service.get_zipcode_info(zipcode.strip())
+        
+        # Create a formatted location string
+        if zipcode_info.city and zipcode_info.state:
+            location_parts = []
+            if zipcode_info.city:
+                location_parts.append(zipcode_info.city)
+            if zipcode_info.state:
+                location_parts.append(zipcode_info.state)
+            if zipcode_info.county_name:
+                location_parts.append(zipcode_info.county_name)
+
+            location = ", ".join(location_parts)
+
+            # Also update coordinates if not provided
+            if not courier_data.get('latitude') and zipcode_info.lat:
+                courier_data['latitude'] = zipcode_info.lat
+            if not courier_data.get('longitude') and zipcode_info.lon:
+                courier_data['longitude'] = zipcode_info.lon
+
+    except Exception as e:
+        # If geocoding fails, continue without location - don't fail the whole creation
+        print(f"Warning: Could not geocode zipcode {zipcode}: {e}")
+    
     with get_db() as conn:
         # Create courier profile
         cur = conn.execute("""
@@ -36,7 +69,7 @@ def create_courier_profile(user_id, courier_data):
             courier_data.get('is_available', False),
             datetime.utcnow() if courier_data.get('is_available') else None,
             courier_data.get('notes', '').strip() or None,
-            courier_data.get('location', '').strip() or None
+            location  # Use the generated or provided location
         ))
 
         courier_id = cur.lastrowid
@@ -110,19 +143,37 @@ def safe_strip(value):
 def update_courier_profile(courier_id, courier_data):
     """Updates courier profile - Now allows managers to update any courier"""
     # Get existing profile
-    existing_courier = get_courier_by_id(courier_id)
-    # if not existing_courier:
-    #     return None, {
-    #         'error': 'Courier not found',
-    #         'code': CourierErrorCodes.COURIER_NOT_FOUND
-    #     }
+    location = ''
+    zipcode = courier_data.get('zipcode')
+    
+    # If location is not provided but zipcode is, automatically generate location
+    try:
+        zip_service = ZipCodeService()
+        zipcode_info = zip_service.get_zipcode_info(zipcode.strip())
+        
+        # Create a formatted location string
+        if zipcode_info.city and zipcode_info.state:
+            location_parts = []
+            if zipcode_info.city:
+                location_parts.append(zipcode_info.city)
+            if zipcode_info.state:
+                location_parts.append(zipcode_info.state)
+            if zipcode_info.county_name:
+                location_parts.append(zipcode_info.county_name)
 
-    # Check access rights - Now allows managers
-    # if not can_modify_courier(existing_courier, current_user):
-    #     return None, {
-    #         'error': 'Cannot modify other courier profile',
-    #         'code': CourierErrorCodes.CANNOT_MODIFY_OTHER_COURIER
-    #     }
+            location = ", ".join(location_parts)
+
+            # Also update coordinates if not provided
+            if not courier_data.get('latitude') and zipcode_info.lat:
+                courier_data['latitude'] = zipcode_info.lat
+            if not courier_data.get('longitude') and zipcode_info.lon:
+                courier_data['longitude'] = zipcode_info.lon
+
+    except Exception as e:
+        # If geocoding fails, continue without location - don't fail the whole creation
+        print(f"Warning: Could not geocode zipcode {zipcode}: {e}")
+
+    existing_courier = get_courier_by_id(courier_id)
 
     with get_db() as conn:
         update_fields = []
@@ -139,7 +190,8 @@ def update_courier_profile(courier_id, courier_data):
             ('latitude', courier_data.get('latitude')),
             ('longitude', courier_data.get('longitude')),
             ('notes', safe_strip(courier_data.get('notes'))),
-            ('location', safe_strip(courier_data.get('location')))
+            ('location', location),
+            # ('location', safe_strip(courier_data.get('location')))
         ]
 
         for field, value in fields_to_update:
