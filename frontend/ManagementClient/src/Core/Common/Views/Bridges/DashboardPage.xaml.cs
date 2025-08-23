@@ -385,6 +385,10 @@ public partial class DashboardPage : ContentPage
                 c.Zipcode,
                 c.Latitude,
                 c.Longitude,
+                c.Location,
+                c.Capacity,
+                c.Dimensions,
+                c.Notes,
                 VehicleType = c.VehicleType,
                 IsAvailable = c.IsAvailable
             }).ToList();
@@ -558,6 +562,10 @@ public partial class DashboardPage : ContentPage
                 c.Zipcode,
                 c.Latitude,
                 c.Longitude,
+                c.Location,
+                c.Capacity,
+                c.Dimensions,
+                c.Notes,
                 VehicleType = c.VehicleType,
                 IsAvailable = c.IsAvailable
             }).ToList();
@@ -890,6 +898,10 @@ public partial class DashboardPage : ContentPage
                     c.Zipcode,
                     c.Latitude,
                     c.Longitude,
+                    c.Location,
+                    c.Capacity,
+                    c.Dimensions,
+                    c.Notes,
                     VehicleType = c.VehicleType,
                     IsAvailable = c.IsAvailable
                 }).ToList<object>();
@@ -906,6 +918,10 @@ public partial class DashboardPage : ContentPage
                     c.Zipcode,
                     c.Latitude,
                     c.Longitude,
+                    c.Location,
+                    c.Capacity,
+                    c.Dimensions,
+                    c.Notes,
                     VehicleType = c.VehicleType,
                     IsAvailable = c.IsAvailable
                 }).ToList<object>();

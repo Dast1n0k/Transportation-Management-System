@@ -18,8 +18,11 @@
         ContentTemplate="{DataTemplate local:DashboardPage}"
         Shell.FlyoutBehavior="Disabled" />
 
-
-
+    <ShellContent
+        Title="DeliveryGuysPage"
+        Route="delivery-guys-page"
+        ContentTemplate="{DataTemplate local:DeliveryGuysPage}"
+        Shell.FlyoutBehavior="Disabled" />
 
 
     <!-- <Shell.Resources>

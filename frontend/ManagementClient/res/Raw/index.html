@@ -179,15 +179,31 @@
 
         function createPopupContent(courier) {
             return `
-                    <div style="text-align: center; font-family: Arial, sans-serif;">
-                        <strong>${courier.Name} ${courier.Surname}</strong><br>
-                        <em>${courier.VehicleType}</em><br>
-                        Status: <span style="color: ${courier.IsAvailable ? '#4CAF50' : '#f44336'}">
-                            ${courier.IsAvailable ? 'Available' : 'Unavailable'}
-                        </span><br>
-                        Location: ${courier.Location || 'Not specified'}<br>
-                        Phone: ${courier.Phone || 'Not provided'}<br>
-                        Capacity: ${courier.Capacity || 'Not specified'}
+                    <div style="text-align: center; font-family: Arial, sans-serif; max-width: 250px;">
+                        <strong style="color: #2c3e50; font-size: 16px;">${courier.Name} ${courier.Surname}</strong><br>
+                        <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                            <strong>Vehicle:</strong> ${courier.VehicleType || 'Not specified'}<br>
+                            <strong>Status:</strong> <span style="color: ${courier.IsAvailable ? '#4CAF50' : '#f44336'}; font-weight: bold;">
+                                ${courier.IsAvailable ? 'Available' : 'Unavailable'}
+                            </span>
+                        </div>
+                        <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                            <strong>📍 Location:</strong> ${courier.Location || 'Not specified'}<br>
+                            <strong>📮 Zipcode:</strong> ${courier.Zipcode || 'Not provided'}<br>
+                            <strong>📞 Phone:</strong> ${courier.Phone || 'Not provided'}
+                        </div>
+                        <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                            <strong>📦 Capacity:</strong> ${courier.Capacity || 'Not specified'}<br>
+                            <strong>📏 Dimensions:</strong> ${courier.Dimensions || 'Not specified'}
+                        </div>
+                        ${courier.Notes ? `<div style="margin: 8px 0; padding: 4px; background-color: #fff3cd; border-radius: 4px; border-left: 3px solid #ffc107;">
+                            <strong>📝 Notes:</strong> ${courier.Notes}
+                        </div>` : ''}
+                        <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">
+                            <strong>Coordinates:</strong><br>
+                            Lat: ${courier.Latitude?.toFixed(6) || 'N/A'}<br>
+                            Lng: ${courier.Longitude?.toFixed(6) || 'N/A'}
+                        </div>
                     </div>
                 `;
         }
