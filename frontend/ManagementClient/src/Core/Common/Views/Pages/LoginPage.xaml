@@ -2,15 +2,9 @@
 <ContentPage x:Class="ManagementClient.Core.Common.Views.Bridges.LoginPage"
              xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:converters="clr-namespace:ManagementClient.Core.Common.Converters"
              Title="{Binding Title}"
              Style="{StaticResource BasePageStyle}"
              Shell.NavBarIsVisible="False">
-
-       <ContentPage.Resources>
-              <converters:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
-              <converters:PasswordVisibilityConverter x:Key="PasswordVisibilityConverter"/>
-       </ContentPage.Resources>
 
        <ScrollView>
               <Grid RowDefinitions="*,Auto,*"
@@ -46,21 +40,19 @@
                                                         <Entry Grid.Column="0"
                                                                Placeholder="Password"
                                                                Text="{Binding Password}"
-                                                               IsPassword="{Binding IsPasswordVisible, Converter={StaticResource InvertedBoolConverter}}"
+                                                               IsPassword="True"
                                                                Style="{StaticResource RoundedEntryStyle}"
                                                                ReturnType="Done"
                                                                ReturnCommand="{Binding LoginCommand}"/>
 
                                                         <Button Grid.Column="1"
-                                                                Text="{Binding IsPasswordVisible, Converter={StaticResource PasswordVisibilityConverter}}"
+                                                                Text="👁️"
                                                                 Command="{Binding TogglePasswordVisibilityCommand}"
                                                                 Style="{StaticResource IconButtonStyle}"
                                                                 VerticalOptions="Center"
                                                                 Margin="8,0,0,0"/>
                                                  </Grid>
                                           </StackLayout>
-
-
 
                                           <!-- Login Button -->
                                           <Button Text="Login"

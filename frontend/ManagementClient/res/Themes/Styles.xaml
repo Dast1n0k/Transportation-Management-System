@@ -11,246 +11,289 @@
         <converters:ViewToggleStyleConverter x:Key="ViewToggleStyleConverter"/> -->
 
         <!-- <converters:SaveButtonTextConverter x:Key="SaveButtonTextConverter"/>
-    <converters:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
-    <converters:PasswordVisibilityConverter x:Key="PasswordVisibilityConverter"/>
-    <converters:ViewToggleStyleConverter x:Key="ViewToggleStyleConverter"/>
-    <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter"/> -->
+        <converters:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+        <converters:PasswordVisibilityConverter x:Key="PasswordVisibilityConverter"/>
+        <converters:ViewToggleStyleConverter x:Key="ViewToggleStyleConverter"/>
+        <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter"/> -->
 
         <Style x:Key="BasePageStyle"
-                        TargetType="ContentPage">
+               TargetType="ContentPage">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource PageBackgroundColor}"/>
+                        Value="{DynamicResource PageBackgroundColor}"/>
         </Style>
 
         <Style x:Key="TitleLabelStyle"
-                        TargetType="Label">
+               TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="30"/>
+                        Value="30"/>
                 <Setter Property="FontAttributes"
-                                Value="Bold"/>
+                        Value="Bold"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
                 <Setter Property="HorizontalTextAlignment"
-                                Value="Center"/>
+                        Value="Center"/>
         </Style>
 
         <Style x:Key="SectionTitleLabelStyle"
-                        TargetType="Label">
+               TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="22"/>
+                        Value="22"/>
                 <Setter Property="FontAttributes"
-                                Value="Bold"/>
+                        Value="Bold"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
         </Style>
 
         <Style x:Key="SubtitleLabelStyle"
-                        TargetType="Label">
+               TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="18"/>
+                        Value="18"/>
                 <Setter Property="FontAttributes"
-                                Value="Bold"/>
+                        Value="Bold"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
         </Style>
 
         <Style x:Key="BodyLabelStyle"
-                        TargetType="Label">
+               TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="14"/>
+                        Value="14"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
         </Style>
 
         <Style x:Key="CaptionLabelStyle"
-                        TargetType="Label">
+               TargetType="Label">
                 <Setter Property="FontSize"
-                                Value="12"/>
+                        Value="12"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource SecondaryTextColor}"/>
+                        Value="{DynamicResource SecondaryTextColor}"/>
         </Style>
 
         <Style x:Key="BaseButtonStyle"
-                        TargetType="Button">
+               TargetType="Button">
                 <Setter Property="HeightRequest"
-                                Value="48"/>
+                        Value="48"/>
                 <Setter Property="FontSize"
-                                Value="16"/>
+                        Value="16"/>
                 <Setter Property="FontAttributes"
-                                Value="Bold"/>
+                        Value="Bold"/>
                 <Setter Property="CornerRadius"
-                                Value="8"/>
+                        Value="8"/>
         </Style>
 
         <Style x:Key="PrimaryButtonStyle"
-                        TargetType="Button"
-                        BasedOn="{StaticResource BaseButtonStyle}">
+               TargetType="Button"
+               BasedOn="{StaticResource BaseButtonStyle}">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource Primary}"/>
+                        Value="{DynamicResource Primary}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource LightTextColor}"/>
+                        Value="{DynamicResource LightTextColor}"/>
         </Style>
 
         <Style x:Key="SecondaryButtonStyle"
-                        TargetType="Button"
-                        BasedOn="{StaticResource BaseButtonStyle}">
+               TargetType="Button"
+               BasedOn="{StaticResource BaseButtonStyle}">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource Secondary}"/>
+                        Value="{DynamicResource Secondary}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource LightTextColor}"/>
+                        Value="{DynamicResource LightTextColor}"/>
         </Style>
 
         <Style x:Key="DangerButtonStyle"
-                        TargetType="Button"
-                        BasedOn="{StaticResource BaseButtonStyle}">
+               TargetType="Button"
+               BasedOn="{StaticResource BaseButtonStyle}">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource Danger}"/>
+                        Value="{DynamicResource Danger}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource LightTextColor}"/>
+                        Value="{DynamicResource LightTextColor}"/>
         </Style>
 
         <Style x:Key="IconButtonStyle"
-                        TargetType="Button">
+               TargetType="Button">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource SurfaceBackgroundColor}"/>
+                        Value="{DynamicResource SurfaceBackgroundColor}"/>
                 <Setter Property="BorderColor"
-                                Value="{DynamicResource BorderColor}"/>
+                        Value="{DynamicResource BorderColor}"/>
                 <Setter Property="BorderWidth"
-                                Value="0"/>
+                        Value="0"/>
                 <Setter Property="WidthRequest"
-                                Value="40"/>
+                        Value="40"/>
                 <Setter Property="HeightRequest"
-                                Value="40"/>
+                        Value="40"/>
                 <Setter Property="CornerRadius"
-                                Value="20"/>
+                        Value="20"/>
                 <Setter Property="FontSize"
-                                Value="16"/>
+                        Value="16"/>
                 <Setter Property="Padding"
-                                Value="0"/>
+                        Value="0"/>
+        </Style>
+
+        <Style x:Key="EditButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource BaseButtonStyle}">
+                <Setter Property="BackgroundColor"
+                        Value="{DynamicResource Primary}"/>
+                <Setter Property="TextColor"
+                        Value="{DynamicResource LightTextColor}"/>
+                <Setter Property="WidthRequest"
+                        Value="100"/>
+                <Setter Property="HeightRequest"
+                        Value="36"/>
+                <Setter Property="FontSize"
+                        Value="14"/>
+                <Setter Property="CornerRadius"
+                        Value="6"/>
+                <Setter Property="Padding"
+                        Value="8,4"/>
+        </Style>
+
+        <Style x:Key="AvailableStatusBadgeStyle"
+               TargetType="Border">
+                <Setter Property="BackgroundColor"
+                        Value="{DynamicResource Success}"/>
+                <Setter Property="StrokeShape"
+                        Value="RoundRectangle 10"/>
+                <Setter Property="Padding"
+                        Value="8,4"/>
+                <Setter Property="HorizontalOptions"
+                        Value="Start"/>
+        </Style>
+
+        <Style x:Key="UnavailableStatusBadgeStyle"
+               TargetType="Border">
+                <Setter Property="BackgroundColor"
+                        Value="{DynamicResource Danger}"/>
+                <Setter Property="StrokeShape"
+                        Value="RoundRectangle 10"/>
+                <Setter Property="Padding"
+                        Value="8,4"/>
+                <Setter Property="HorizontalOptions"
+                        Value="Start"/>
         </Style>
 
         <Style x:Key="ActiveToggleButtonStyle"
-                        TargetType="Button"
-                        BasedOn="{StaticResource BaseButtonStyle}">
+               TargetType="Button"
+               BasedOn="{StaticResource BaseButtonStyle}">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource Primary}"/>
+                        Value="{DynamicResource Primary}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource LightTextColor}"/>
+                        Value="{DynamicResource LightTextColor}"/>
         </Style>
 
         <Style x:Key="InactiveToggleButtonStyle"
-                        TargetType="Button"
-                        BasedOn="{StaticResource BaseButtonStyle}">
+               TargetType="Button"
+               BasedOn="{StaticResource BaseButtonStyle}">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource SurfaceBackgroundColor}"/>
+                        Value="{DynamicResource SurfaceBackgroundColor}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
                 <Setter Property="BorderColor"
-                                Value="{DynamicResource BorderColor}"/>
+                        Value="{DynamicResource BorderColor}"/>
                 <Setter Property="BorderWidth"
-                                Value="1"/>
+                        Value="1"/>
         </Style>
 
         <Style x:Key="RoundedEntryStyle"
-                        TargetType="Entry">
+               TargetType="Entry">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource InputBackgroundColor}"/>
+                        Value="{DynamicResource InputBackgroundColor}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
                 <Setter Property="PlaceholderColor"
-                                Value="{DynamicResource SecondaryTextColor}"/>
+                        Value="{DynamicResource SecondaryTextColor}"/>
                 <Setter Property="HeightRequest"
-                                Value="48"/>
+                        Value="48"/>
                 <Setter Property="FontSize"
-                                Value="16"/>
+                        Value="16"/>
         </Style>
 
         <Style x:Key="RoundedEditorStyle"
-                        TargetType="Editor">
+               TargetType="Editor">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource InputBackgroundColor}"/>
+                        Value="{DynamicResource InputBackgroundColor}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
                 <Setter Property="PlaceholderColor"
-                                Value="{DynamicResource SecondaryTextColor}"/>
+                        Value="{DynamicResource SecondaryTextColor}"/>
                 <Setter Property="FontSize"
-                                Value="16"/>
+                        Value="16"/>
         </Style>
 
         <Style x:Key="BasePicker"
-                        TargetType="Picker">
+               TargetType="Picker">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource InputBackgroundColor}"/>
+                        Value="{DynamicResource InputBackgroundColor}"/>
                 <Setter Property="TextColor"
-                                Value="{DynamicResource PrimaryTextColor}"/>
+                        Value="{DynamicResource PrimaryTextColor}"/>
                 <Setter Property="TitleColor"
-                                Value="{DynamicResource SecondaryTextColor}"/>
+                        Value="{DynamicResource SecondaryTextColor}"/>
                 <Setter Property="HeightRequest"
-                                Value="48"/>
+                        Value="48"/>
                 <Setter Property="FontSize"
-                                Value="16"/>
+                        Value="16"/>
         </Style>
 
         <Style x:Key="CardBorderStyle"
-                        TargetType="Border">
+               TargetType="Border">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource CardBackgroundColor}"/>
+                        Value="{DynamicResource CardBackgroundColor}"/>
                 <Setter Property="Stroke"
-                                Value="{DynamicResource BorderColor}"/>
+                        Value="{DynamicResource BorderColor}"/>
                 <Setter Property="StrokeThickness"
-                                Value="1.5"/>
+                        Value="1.5"/>
                 <Setter Property="StrokeShape"
-                                Value="RoundRectangle 8"/>
+                        Value="RoundRectangle 8"/>
                 <Setter Property="Padding"
-                                Value="12"/>
+                        Value="12"/>
                 <Setter Property="Margin"
-                                Value="0,4"/>
+                        Value="0,4"/>
         </Style>
 
         <Style x:Key="ModalBorderStyle"
-                        TargetType="Border">
+               TargetType="Border">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource CardBackgroundColor}"/>
+                        Value="{DynamicResource CardBackgroundColor}"/>
                 <Setter Property="Stroke"
-                                Value="{DynamicResource BorderColor}"/>
+                        Value="{DynamicResource BorderColor}"/>
                 <Setter Property="StrokeThickness"
-                                Value="1.5"/>
+                        Value="1.5"/>
                 <Setter Property="StrokeShape"
-                                Value="RoundRectangle 12"/>
+                        Value="RoundRectangle 12"/>
                 <Setter Property="Padding"
-                                Value="24"/>
+                        Value="24"/>
         </Style>
 
         <Style x:Key="StatusBadgeStyle"
-                        TargetType="Border">
+               TargetType="Border">
                 <Setter Property="StrokeShape"
-                                Value="RoundRectangle 10"/>
+                        Value="RoundRectangle 10"/>
                 <Setter Property="Padding"
-                                Value="8,4"/>
+                        Value="8,4"/>
                 <Setter Property="HorizontalOptions"
-                                Value="Start"/>
+                        Value="Start"/>
         </Style>
 
         <Style x:Key="BaseCollectionViewStyle"
-                        TargetType="CollectionView">
+               TargetType="CollectionView">
                 <Setter Property="BackgroundColor"
-                                Value="{DynamicResource PageBackgroundColor}"/>
+                        Value="{DynamicResource PageBackgroundColor}"/>
                 <Setter Property="SelectionMode"
-                                Value="None"/>
+                        Value="None"/>
         </Style>
 
         <Style x:Key="LoadingIndicatorStyle"
-                        TargetType="ActivityIndicator">
+               TargetType="ActivityIndicator">
                 <Setter Property="Color"
-                                Value="{DynamicResource Primary}"/>
+                        Value="{DynamicResource Primary}"/>
                 <Setter Property="HeightRequest"
-                                Value="40"/>
+                        Value="40"/>
                 <Setter Property="WidthRequest"
-                                Value="40"/>
+                        Value="40"/>
                 <Setter Property="HorizontalOptions"
-                                Value="Center"/>
+                        Value="Center"/>
                 <Setter Property="VerticalOptions"
-                                Value="Center"/>
+                        Value="Center"/>
         </Style>
 
 </ResourceDictionary>

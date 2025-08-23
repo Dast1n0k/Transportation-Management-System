@@ -3,16 +3,8 @@
              xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:ManagementClient.Core.Common.Models"
-             xmlns:converters="clr-namespace:ManagementClient.Core.Common.Converters"
              Title="{Binding Title}"
              Style="{StaticResource BasePageStyle}">
-
-    <ContentPage.Resources>
-        <converters:AvailabilityToColorConverter x:Key="AvailabilityToColorConverter"/>
-        <converters:AvailabilityToTextConverter x:Key="AvailabilityToTextConverter"/>
-        <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter"/>
-        <converters:VehicleTypeToEmojiConverter x:Key="VehicleTypeToEmojiConverter"/>
-    </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*">
 
@@ -51,13 +43,13 @@
             <!-- Courier List -->
             <RefreshView IsRefreshing="{Binding IsRefreshing}"
                          Command="{Binding RefreshCommand}">
-                
+
                 <CollectionView ItemsSource="{Binding Couriers}"
                                 Style="{StaticResource BaseCollectionViewStyle}"
                                 Margin="20">
-                    
+
                     <CollectionView.EmptyView>
-                        <StackLayout VerticalOptions="CenterAndExpand" 
+                        <StackLayout VerticalOptions="CenterAndExpand"
                                      HorizontalOptions="CenterAndExpand"
                                      Spacing="16">
                             <Label Text="No couriers found"
@@ -74,7 +66,7 @@
                             <Border Style="{StaticResource CardBorderStyle}"
                                     Margin="0,0,0,20"
                                     MinimumHeightRequest="200">
-                                
+
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditCourierCommand}"
                                                           CommandParameter="{Binding .}"/>
@@ -86,103 +78,115 @@
                                       RowSpacing="12">
 
                                     <!-- Name and Status -->
-                                    <StackLayout Grid.Column="0" Grid.Row="0" 
-                                                 Orientation="Horizontal" 
+                                    <StackLayout Grid.Column="0"
+                                            Grid.Row="0"
+                                                 Orientation="Horizontal"
                                                  Spacing="12">
                                         <Label Text="{Binding Name}"
                                                Style="{StaticResource SubtitleLabelStyle}"
-                                               FontSize="22"
-                                               FontAttributes="Bold"
-                                               VerticalOptions="Center"/>
+                                               FontAttributes="Bold"/>
                                         <Label Text="{Binding Surname}"
                                                Style="{StaticResource SubtitleLabelStyle}"
-                                               FontSize="22"
-                                               FontAttributes="Bold"
-                                               VerticalOptions="Center"/>
-                                        
+                                               FontAttributes="Bold"/>
+
                                         <!-- Status Badge -->
-                                        <Border Style="{StaticResource StatusBadgeStyle}"
-                                                BackgroundColor="{Binding IsAvailable, Converter={StaticResource AvailabilityToColorConverter}}">
-                                            <Label Text="{Binding IsAvailable, Converter={StaticResource AvailabilityToTextConverter}}"
-                                                   TextColor="White"
+                                        <Border>
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="StrokeShape" Value="RoundRectangle 10"/>
+                                                    <Setter Property="Padding" Value="8,2"/>
+                                                    <Setter Property="HorizontalOptions" Value="Start"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="True">
+                                                            <Setter Property="BackgroundColor" Value="{DynamicResource Success}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
+                                                            <Setter Property="BackgroundColor" Value="{DynamicResource Danger}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Label TextColor="{DynamicResource LightTextColor}"
                                                    FontSize="16"
-                                                   FontAttributes="Bold"
-                                                   Padding="8,4"/>
+                                                   FontAttributes="Bold">
+                                                <Label.Style>
+                                                    <Style TargetType="Label">
+                                                        <Setter Property="Padding" Value="0"/>
+                                                        <Setter Property="VerticalOptions" Value="Center"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="True">
+                                                                <Setter Property="Text" Value="Available"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="False">
+                                                                <Setter Property="Text" Value="Unavailable"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Label.Style>
+                                            </Label>
                                         </Border>
                                     </StackLayout>
 
                                     <!-- Action Buttons -->
-                                    <StackLayout Grid.Column="1" Grid.Row="0" 
-                                                 Orientation="Horizontal" 
+                                    <StackLayout Grid.Column="1"
+                                            Grid.Row="0"
+                                                 Orientation="Horizontal"
                                                  Spacing="12">
                                         <Button Text="✏️ Edit"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditCourierCommand}"
                                                 CommandParameter="{Binding .}"
-                                                Style="{StaticResource IconButtonStyle}"
-                                                FontSize="16"
-                                                FontAttributes="Bold"
-                                                WidthRequest="80"
-                                                HeightRequest="40"/>
+                                                Style="{StaticResource EditButtonStyle}"/>
                                         <Button Text="🗑️ Delete"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteCourierCommand}"
                                                 CommandParameter="{Binding .}"
-                                                Style="{StaticResource DangerButtonStyle}"
-                                                FontSize="16"
-                                                FontAttributes="Bold"
-                                                WidthRequest="100"
-                                                HeightRequest="40"/>
+                                                Style="{StaticResource DangerButtonStyle}"/>
                                     </StackLayout>
 
                                     <!-- All Info Horizontally -->
-                                    <ScrollView Grid.Column="0" Grid.Row="1" 
-                                               Grid.ColumnSpan="2"
-                                               Orientation="Horizontal"
-                                               HorizontalScrollBarVisibility="Never">
-                                        <StackLayout Orientation="Horizontal" 
+                                    <ScrollView Grid.Column="0"
+                                            Grid.Row="1"
+                                                Grid.ColumnSpan="2"
+                                                Orientation="Horizontal"
+                                                HorizontalScrollBarVisibility="Never">
+                                        <StackLayout Orientation="Horizontal"
                                                      Spacing="25">
                                             <Label Text="{Binding Phone, StringFormat='📞 {0}'}"
                                                    Style="{StaticResource BodyLabelStyle}"
-                                                   FontSize="18"
                                                    FontAttributes="Bold"/>
                                             <Label Text="{Binding Zipcode, StringFormat='📍 {0}'}"
                                                    Style="{StaticResource BodyLabelStyle}"
-                                                   FontSize="18"
                                                    FontAttributes="Bold"/>
-                                            <StackLayout Orientation="Horizontal" Spacing="8">
-                                                <Label Text="{Binding VehicleType, Converter={StaticResource VehicleTypeToEmojiConverter}}"
+                                            <StackLayout Orientation="Horizontal"
+                                                    Spacing="8">
+                                                <Label Text="🚗"
                                                        FontSize="18"/>
                                                 <Label Text="{Binding VehicleType}"
                                                        Style="{StaticResource BodyLabelStyle}"
-                                                       FontSize="18"
                                                        FontAttributes="Bold"/>
                                             </StackLayout>
                                             <Label Text="{Binding Capacity, StringFormat='📦 {0}'}"
                                                    Style="{StaticResource BodyLabelStyle}"
-                                                   FontSize="18"
-                                                   FontAttributes="Bold"
-                                                   IsVisible="{Binding Capacity, Converter={StaticResource StringNotEmptyConverter}}"/>
+                                                   FontAttributes="Bold"/>
                                             <Label Text="{Binding Dimensions, StringFormat='📐 {0}'}"
                                                    Style="{StaticResource BodyLabelStyle}"
-                                                   FontSize="18"
-                                                   FontAttributes="Bold"
-                                                   IsVisible="{Binding Dimensions, Converter={StaticResource StringNotEmptyConverter}}"/>
+                                                   FontAttributes="Bold"/>
                                         </StackLayout>
                                     </ScrollView>
 
                                     <!-- Notes (if any) -->
-                                    <StackLayout Grid.Column="0" Grid.Row="2" 
-                                                 Grid.ColumnSpan="2"
-                                                 IsVisible="{Binding Notes, Converter={StaticResource StringNotEmptyConverter}}">
+                                    <StackLayout Grid.Column="0"
+                                            Grid.Row="2"
+                                                 Grid.ColumnSpan="2">
                                         <Label Text="{Binding Notes, StringFormat='💬 {0}'}"
                                                Style="{StaticResource CaptionLabelStyle}"
-                                               FontSize="16"
                                                FontAttributes="Italic"
                                                MaxLines="2"
                                                LineBreakMode="TailTruncation"/>
                                     </StackLayout>
-                                    
+
                                     <!-- Spacer for better layout -->
-                                    <BoxView Grid.Column="0" Grid.Row="3" 
+                                    <BoxView Grid.Column="0"
+                                            Grid.Row="3"
                                              Grid.ColumnSpan="2"
                                              HeightRequest="10"
                                              Color="Transparent"/>
@@ -197,4 +201,3 @@
         </Grid>
     </Grid>
 </ContentPage>
-
