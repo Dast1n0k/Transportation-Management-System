@@ -18,7 +18,7 @@ public partial class DashboardPage : ContentPage
     private readonly ICourierRepository _courierRepository;
     private bool _isMapInitialized = false;
     private int _mapRedrawCounter = 0;
-    
+
     // Add debouncing fields
     private bool _isMapUpdateInProgress = false;
     private CancellationTokenSource? _mapUpdateCancellation;
@@ -41,6 +41,8 @@ public partial class DashboardPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _courierService.CouriersChanged += OnCourierServiceChanged;
 
         try
         {
@@ -71,13 +73,13 @@ public partial class DashboardPage : ContentPage
             if (_viewModel.HasPerformedSearch)
             {
                 System.Diagnostics.Debug.WriteLine("DashboardPage: Previous search detected - AUTOMATICALLY STOPPING SEARCH to show all couriers");
-                
+
                 // Use the ViewModel's StopSearchCommand to properly clear all search state
                 if (_viewModel.StopSearchCommand.CanExecute(null))
                 {
                     _viewModel.StopSearchCommand.Execute(null);
                     System.Diagnostics.Debug.WriteLine("DashboardPage: Search state cleared automatically using StopSearchCommand");
-                    
+
                     // Give it a moment to complete since Execute is async but returns void
                     await Task.Delay(100);
                 }
@@ -110,7 +112,7 @@ public partial class DashboardPage : ContentPage
             _mapRedrawCounter++;
             System.Diagnostics.Debug.WriteLine($"DashboardPage: EXPLICIT FORCE MAP UPDATE #{_mapRedrawCounter} - RECEIVED ForceMapUpdate PROPERTY CHANGE");
             System.Diagnostics.Debug.WriteLine($"DashboardPage: ForceMapUpdate value: {_viewModel.ForceMapUpdate}, IsMapView: {_viewModel.IsMapView}, HasSearchLocation: {_viewModel.HasSearchLocation}");
-            
+
             if (_viewModel.IsMapView)
             {
                 Dispatcher.Dispatch(async () =>
@@ -755,7 +757,7 @@ public partial class DashboardPage : ContentPage
         try
         {
             System.Diagnostics.Debug.WriteLine("DashboardPage: UpdateSearchVisualizationAsync called");
-            
+
             if (!_viewModel.HasSearchLocation || !_viewModel.IsMapView)
             {
                 System.Diagnostics.Debug.WriteLine("DashboardPage: No search location or not in map view - skipping search visualization");
@@ -767,7 +769,7 @@ public partial class DashboardPage : ContentPage
             await UpdateMapRadiusDisplayAsync();
             await UpdateMapMarkersAsync();
             await FitMapToContentAsync();
-            
+
             System.Diagnostics.Debug.WriteLine("DashboardPage: Search visualization update completed");
         }
         catch (Exception ex)
@@ -941,7 +943,7 @@ public partial class DashboardPage : ContentPage
 
         if (_viewModel != null)
         {
-            _viewModel.PropertyChanged -= OnViewModelPropertyChanged; 
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
         if (_courierService != null)
@@ -955,9 +957,9 @@ public partial class DashboardPage : ContentPage
         // Cancel any pending update
         _mapUpdateCancellation?.Cancel();
         _mapUpdateCancellation = new CancellationTokenSource();
-        
+
         var cancellationToken = _mapUpdateCancellation.Token;
-        
+
         // Schedule update with small delay to let all property changes complete
         Dispatcher.Dispatch(async () =>
         {
@@ -965,7 +967,7 @@ public partial class DashboardPage : ContentPage
             {
                 // Wait a bit for all property changes to complete
                 await Task.Delay(100, cancellationToken);
-                
+
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     await ExecuteSingleMapUpdate();
@@ -1028,7 +1030,11 @@ public partial class DashboardPage : ContentPage
             System.Diagnostics.Debug.WriteLine("DashboardPage: STEP 1 - CLEARING SEARCH RADIUS AND WAYPOINT");
             try
             {
-                var clearScript = "if (window.clearSearchRadius) { window.clearSearchRadius(); } else { console.error('clearSearchRadius function not found'); }";
+                var clearScript = @"
+                if (window.clearSearchRadius)   { window.clearSearchRadius(); }
+                if (window.clearSearchWaypoint) { window.clearSearchWaypoint(); }
+                if (window.removeSearchLayers)  { window.removeSearchLayers(); }
+                ";
                 var clearResult = await CourierMapWebView.EvaluateJavaScriptAsync(clearScript);
                 System.Diagnostics.Debug.WriteLine($"DashboardPage: SEARCH VISUALIZATION CLEARED - Result: {clearResult}");
             }

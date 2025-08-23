@@ -10,9 +10,6 @@ def format_courier_response(courier_data):
 
     formatted = dict(courier_data)
 
-    print(courier_data)
-    print(formatted['location'])
-
     if ('location' in formatted and formatted['location']):
         formatted['location'] = formatted['location'].strip()
 
@@ -198,6 +195,7 @@ def format_distance_miles(distance_miles):
         return f"{distance_miles:.1f}mi"
     else:
         return f"{int(distance_miles)}mi"
+
 
 def format_capacity(capacity):
     """Formats capacity for US market (pounds and tons)"""
