@@ -391,8 +391,8 @@ public class DashboardViewModel : BaseViewModel
             var json = System.Text.Json.JsonSerializer.Serialize(request);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var serverPort = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_PORT") ?? "5000";
-            var serverEndpoint = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_URI") ?? "localhost";
+            var serverPort = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_PORT");
+            var serverEndpoint = Environment.GetEnvironmentVariable("SERVER_ENDPOINT_URI");
             var _baseUri = $"http://{serverEndpoint}:{serverPort}";
 
             using var httpClient = new HttpClient();
