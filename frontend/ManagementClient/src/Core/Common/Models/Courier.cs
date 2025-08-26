@@ -204,6 +204,17 @@ public class Courier : INotifyPropertyChanged
         }
     }
 
+    public string VehicleIcon
+    {
+        get => _vehicleType?.ToLower() switch
+        {
+            "sprinter" => "🚐",           // Van/Sprinter
+            "straight_small" => "🚚",     // Small truck
+            "straight_large" => "🚛",     // Large truck
+            _ => "❓"                     // Default truck
+        };
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected virtual void OnPropertyChanged(string propertyName)

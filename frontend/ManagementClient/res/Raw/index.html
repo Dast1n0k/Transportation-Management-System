@@ -55,7 +55,6 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             position: relative;
             z-index: 1000;
-            transition: transform 0.2s ease;
         }
 
             .courier-marker:hover {
@@ -70,6 +69,25 @@
             .courier-marker.unavailable {
                 background: linear-gradient(135deg, #f44336, #d32f2f);
                 opacity: 0.8;
+            }
+
+        /* Status circle styles */
+        .status-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 999;
+            opacity: 0.5;
+        }
+
+            .status-circle.available {
+                background: linear-gradient(135deg, #4CAF50, #45a049);
+                animation: pulse-available 2s ease-in-out infinite;
+            }
+
+            .status-circle.unavailable {
+                background: linear-gradient(135deg, #f44336, #d32f2f);
             }
 
         /* ULTRA SIMPLE waypoint - exactly like courier markers */
@@ -131,9 +149,9 @@
         var map = L.map('map', {
             maxBounds: northAmericaBounds.pad(0.1),
             maxBoundsViscosity: 1.0,
-            minZoom: 3,
+            minZoom: 5,
             maxZoom: 18,
-            zoomControl: false  // Explicitly enable zoom controls
+            zoomControl: false
         }).setView([39.8283, -98.5795], 4);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -149,6 +167,18 @@
         var lastMarkerCount = 0;
         var isFirstLoad = true;
         var redrawCounter = 0;
+
+        // Force redraw of markers after zoom to prevent drift
+        map.on('zoomend', function () {
+            courierMarkers.eachLayer(function (layer) {
+                map.removeLayer(layer);
+                map.addLayer(layer);
+            });
+            if (searchCenterMarker) {
+                map.removeLayer(searchCenterMarker);
+                map.addLayer(searchCenterMarker);
+            }
+        });
 
         // Vehicle type icons mapping
         var vehicleIcons = {
@@ -168,44 +198,50 @@
             var icon = getVehicleIcon(vehicleType);
             var statusClass = isAvailable ? 'available' : 'unavailable';
 
+            // Create HTML with a status circle behind the vehicle icon
+            var htmlContent = `
+                    <div class="status-circle ${statusClass}"></div>
+                    <div class="courier-marker ${statusClass}">${icon}</div>
+                `;
+
             return L.divIcon({
-                className: 'courier-marker ' + statusClass,
-                html: icon,
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
-                popupAnchor: [0, -25]
+                className: '', // Clear className to avoid Leaflet adding extra styles
+                html: htmlContent,
+                iconSize: [48, 48], // Match the larger status circle size
+                iconAnchor: [24, 24], // Center anchor (half of iconSize)
+                popupAnchor: [0, -24] // Adjust popup to align with larger icon
             });
         }
 
         function createPopupContent(courier) {
             return `
-                    <div style="text-align: center; font-family: Arial, sans-serif; max-width: 250px;">
-                        <strong style="color: #2c3e50; font-size: 16px;">${courier.Name} ${courier.Surname}</strong><br>
-                        <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
-                            <strong>Vehicle:</strong> ${courier.VehicleType || 'Not specified'}<br>
-                            <strong>Status:</strong> <span style="color: ${courier.IsAvailable ? '#4CAF50' : '#f44336'}; font-weight: bold;">
-                                ${courier.IsAvailable ? 'Available' : 'Unavailable'}
-                            </span>
+                        <div style="text-align: center; font-family: Arial, sans-serif; max-width: 250px;">
+                            <strong style="color: #2c3e50; font-size: 16px;">${courier.Name} ${courier.Surname}</strong><br>
+                            <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                                <strong>Vehicle:</strong> ${courier.VehicleType || 'Not specified'}<br>
+                                <strong>Status:</strong> <span style="color: ${courier.IsAvailable ? '#4CAF50' : '#f44336'}; font-weight: bold;">
+                                    ${courier.IsAvailable ? 'Available' : 'Unavailable'}
+                                </span>
+                            </div>
+                            <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                                <strong>📍 Location:</strong> ${courier.Location || 'Not specified'}<br>
+                                <strong>📮 Zipcode:</strong> ${courier.Zipcode || 'Not provided'}<br>
+                                <strong>📞 Phone:</strong> ${courier.Phone || 'Not provided'}
+                            </div>
+                            <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                                <strong>📦 Capacity:</strong> ${courier.Capacity || 'Not specified'}<br>
+                                <strong>📏 Dimensions:</strong> ${courier.Dimensions || 'Not specified'}
+                            </div>
+                            ${courier.Notes ? `<div style="margin: 8px 0; padding: 4px; background-color: #fff3cd; border-radius: 4px; border-left: 3px solid #ffc107;">
+                                <strong>📝 Notes:</strong> ${courier.Notes}
+                            </div>` : ''}
+                            <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">
+                                <strong>Coordinates:</strong><br>
+                                Lat: ${courier.Latitude?.toFixed(6) || 'N/A'}<br>
+                                Lng: ${courier.Longitude?.toFixed(6) || 'N/A'}
+                            </div>
                         </div>
-                        <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
-                            <strong>📍 Location:</strong> ${courier.Location || 'Not specified'}<br>
-                            <strong>📮 Zipcode:</strong> ${courier.Zipcode || 'Not provided'}<br>
-                            <strong>📞 Phone:</strong> ${courier.Phone || 'Not provided'}
-                        </div>
-                        <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
-                            <strong>📦 Capacity:</strong> ${courier.Capacity || 'Not specified'}<br>
-                            <strong>📏 Dimensions:</strong> ${courier.Dimensions || 'Not specified'}
-                        </div>
-                        ${courier.Notes ? `<div style="margin: 8px 0; padding: 4px; background-color: #fff3cd; border-radius: 4px; border-left: 3px solid #ffc107;">
-                            <strong>📝 Notes:</strong> ${courier.Notes}
-                        </div>` : ''}
-                        <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">
-                            <strong>Coordinates:</strong><br>
-                            Lat: ${courier.Latitude?.toFixed(6) || 'N/A'}<br>
-                            Lng: ${courier.Longitude?.toFixed(6) || 'N/A'}
-                        </div>
-                    </div>
-                `;
+                    `;
         }
 
         // Function to update courier markers (called from C#)
@@ -312,14 +348,14 @@
 
                 console.log('Circle created successfully');
 
-                // SOLUTION: Create waypoint marker EXACTLY like courier markers - copy their exact approach
+                // Create waypoint marker with centered anchor
                 searchCenterMarker = L.marker([latNum, lngNum], {
                     icon: L.divIcon({
-                        className: 'search-waypoint',  // Use same pattern as courier-marker
-                        html: '🎯',  // Simple emoji, no nested elements
-                        iconSize: [35, 35],  // Same approach as courier markers
-                        iconAnchor: [17, 17],  // Center anchor like courier markers
-                        popupAnchor: [0, -20]
+                        className: 'search-waypoint',
+                        html: '🎯',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 17.5], // Center anchor precisely
+                        popupAnchor: [0, -17.5]
                     }),
                     zIndexOffset: 1000
                 }).addTo(map);
@@ -327,15 +363,15 @@
                 console.log('Waypoint marker created successfully');
 
                 searchCenterMarker.bindPopup(`
-                        <div style="text-align: center; font-family: Arial, sans-serif;">
-                            <strong style="color: #3388ff; font-size: 16px;">🎯 Search Waypoint</strong><br>
-                            <strong>Location:</strong> ${zipcode}<br>
-                            <strong>Coordinates:</strong><br>
-                            <span style="font-family: monospace;">Lat: ${latNum.toFixed(6)}</span><br>
-                            <span style="font-family: monospace;">Lng: ${lngNum.toFixed(6)}</span><br>
-                            <strong>Search Radius:</strong> ${radiusNum} miles
-                        </div>
-                    `);
+                            <div style="text-align: center; font-family: Arial, sans-serif;">
+                                <strong style="color: #3388ff; font-size: 16px;">🎯 Search Waypoint</strong><br>
+                                <strong>Location:</strong> ${zipcode}<br>
+                                <strong>Coordinates:</strong><br>
+                                <span style="font-family: monospace;">Lat: ${latNum.toFixed(6)}</span><br>
+                                <span style="font-family: monospace;">Lng: ${lngNum.toFixed(6)}</span><br>
+                                <strong>Search Radius:</strong> ${radiusNum} miles
+                            </div>
+                        `);
 
                 // Fit map to circle bounds with padding
                 map.fitBounds(searchRadiusCircle.getBounds(), { padding: [20, 20] });
@@ -368,27 +404,27 @@
                 var latNum = parseFloat(lat);
                 var lngNum = parseFloat(lng);
 
-                // SOLUTION: Create waypoint marker EXACTLY like courier markers
+                // Create waypoint marker with centered anchor
                 searchCenterMarker = L.marker([latNum, lngNum], {
                     icon: L.divIcon({
-                        className: 'search-waypoint',  // Use same pattern as courier-marker
-                        html: '🎯',  // Simple emoji, no nested elements
-                        iconSize: [35, 35],  // Same approach as courier markers
-                        iconAnchor: [17, 17],  // Center anchor like courier markers
-                        popupAnchor: [0, -20]
+                        className: 'search-waypoint',
+                        html: '🎯',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 17.5], // Center anchor precisely
+                        popupAnchor: [0, -17.5]
                     }),
                     zIndexOffset: 1000
                 }).addTo(map);
 
                 searchCenterMarker.bindPopup(`
-                        <div style="text-align: center; font-family: Arial, sans-serif;">
-                            <strong style="color: #3388ff; font-size: 16px;">🎯 Navigation Waypoint</strong><br>
-                            <strong>Location:</strong> ${zipcode}<br>
-                            <strong>Coordinates:</strong><br>
-                            <span style="font-family: monospace;">Lat: ${latNum.toFixed(6)}</span><br>
-                            <span style="font-family: monospace;">Lng: ${lngNum.toFixed(6)}</span>
-                        </div>
-                    `);
+                            <div style="text-align: center; font-family: Arial, sans-serif;">
+                                <strong style="color: #3388ff; font-size: 16px;">🎯 Navigation Waypoint</strong><br>
+                                <strong>Location:</strong> ${zipcode}<br>
+                                <strong>Coordinates:</strong><br>
+                                <span style="font-family: monospace;">Lat: ${latNum.toFixed(6)}</span><br>
+                                <span style="font-family: monospace;">Lng: ${lngNum.toFixed(6)}</span>
+                            </div>
+                        `);
 
                 // Center map on the waypoint
                 map.setView([latNum, lngNum], 12);
