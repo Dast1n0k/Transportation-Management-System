@@ -47,24 +47,21 @@
                             <!-- Name Field -->
                             <StackLayout Grid.Column="0" Grid.Row="0" Spacing="4">
                                 <Label Text="Name" Style="{StaticResource BodyLabelStyle}"/>
-                                <Entry Placeholder="Enter full name"
-                                       Text="{Binding Name}"
+                                <Entry Text="{Binding Name}"
                                        Style="{StaticResource RoundedEntryStyle}"/>
                             </StackLayout>
 
                             <!-- Surname Field -->
                             <StackLayout Grid.Column="1" Grid.Row="0" Spacing="4">
                                 <Label Text="Surname" Style="{StaticResource BodyLabelStyle}"/>
-                                <Entry Placeholder="Enter surname"
-                                       Text="{Binding Surname}"
+                                <Entry Text="{Binding Surname}"
                                        Style="{StaticResource RoundedEntryStyle}" />
                             </StackLayout>
 
                             <!-- Phone Field -->
                             <StackLayout Grid.Column="0" Grid.Row="1" Spacing="4">
                                 <Label Text="Phone" Style="{StaticResource BodyLabelStyle}"/>
-                                <Entry Placeholder="Enter phone number"
-                                       Text="{Binding Phone}"
+                                <Entry Text="{Binding Phone}"
                                        Keyboard="Telephone"
                                        Style="{StaticResource RoundedEntryStyle}"/>
                             </StackLayout>
@@ -72,8 +69,7 @@
                             <!-- Zipcode Field -->
                             <StackLayout Grid.Column="1" Grid.Row="1" Spacing="4">
                                 <Label Text="Zipcode" Style="{StaticResource BodyLabelStyle}"/>
-                                <Entry Placeholder="Enter courier's zipcode"
-                                       Text="{Binding Zipcode}"
+                                <Entry Text="{Binding Zipcode}"
                                        Style="{StaticResource RoundedEntryStyle}"/>
                             </StackLayout>
 
@@ -109,8 +105,7 @@
                             <!-- Capacity Field -->
                             <StackLayout Grid.Column="1" Grid.Row="0" Spacing="4">
                                 <Label Text="Capacity" Style="{StaticResource BodyLabelStyle}"/>
-                                <Entry Placeholder="Enter capacity (kg/items)"
-                                       Text="{Binding Capacity}"
+                                <Entry Text="{Binding Capacity}"
                                        Keyboard="Numeric"
                                        Style="{StaticResource RoundedEntryStyle}"/>
                             </StackLayout>
@@ -118,8 +113,7 @@
                             <!-- Dimensions Field -->
                             <StackLayout Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Spacing="4">
                                 <Label Text="Dimensions" Style="{StaticResource BodyLabelStyle}"/>
-                                <Entry Placeholder="Enter dimensions (e.g., 2.5m x 1.8m x 2.0m)"
-                                       Text="{Binding Dimensions}"
+                                <Entry Text="{Binding Dimensions}"
                                        Style="{StaticResource RoundedEntryStyle}"/>
                             </StackLayout>
 
@@ -132,8 +126,7 @@
 
                         <StackLayout Spacing="4">
                             <Label Text="Notes" Style="{StaticResource BodyLabelStyle}"/>
-                            <Editor Placeholder="Enter additional notes, special requirements, or comments..."
-                                    Text="{Binding Notes}"
+                            <Editor Text="{Binding Notes}"
                                     HeightRequest="120"
                                     Style="{StaticResource RoundedEditorStyle}"
                                     AutoSize="TextChanges"/>

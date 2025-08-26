@@ -1074,4 +1074,27 @@ public partial class DashboardPage : ContentPage
             System.Diagnostics.Debug.WriteLine($"DashboardPage: ERROR in ClearSearchVisualizationAndShowAllCouriersAsync: {ex.Message}");
         }
     }
+
+    private void OnZipCodeEntryCompleted(object sender, EventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardPage: Enter key pressed in zip code entry");
+
+            // Check if the search command can execute
+            if (_viewModel.SearchZipcodeCommand.CanExecute(null))
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: Executing search command via Enter key");
+                _viewModel.SearchZipcodeCommand.Execute(null);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("DashboardPage: SearchZipcodeCommand cannot execute - likely missing zip code or busy");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"DashboardPage: Error in OnZipCodeEntryCompleted: {ex.Message}");
+        }
+    }
 }

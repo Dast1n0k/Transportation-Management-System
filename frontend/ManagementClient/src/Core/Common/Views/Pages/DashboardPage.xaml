@@ -45,7 +45,9 @@
                                    Style="{StaticResource BodyLabelStyle}"/>
                             <Entry Placeholder="Enter zip code"
                                    Text="{Binding ZipCode}"
-                                   Style="{StaticResource RoundedEntryStyle}"/>
+                                   Style="{StaticResource RoundedEntryStyle}"
+                                   Completed="OnZipCodeEntryCompleted"
+                                   ReturnType="Search"/>
 
                             <Label Text="Radius (miles)"
                                    Style="{StaticResource BodyLabelStyle}"/>

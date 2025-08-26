@@ -466,9 +466,9 @@ public class DashboardViewModel : BaseViewModel
         var searchDistanceText = courierVM.HasDistanceFromSearch ? $"{courierVM.DistanceFromSearch:F1}" : "N/A";
 
         var sb = new StringBuilder();
-        sb.Append($"loaction: {courierVM.Zipcode}, {courierVM.Location}, USA\n");
-        sb.Append($"distance: out {searchDistanceText} miles\n");
-        sb.Append($"dimension: {courierVM.Dimensions}\n");
+        sb.Append($"Location: {courierVM.Zipcode}, {courierVM.Location}, USA\n");
+        sb.Append($"Distance: out {searchDistanceText} miles\n");
+        sb.Append($"Dimension: {courierVM.Dimensions}\n");
         sb.Append($"Rate $");
 
         //sb.AppendLine($"Search Distance: {searchDistanceText}");
