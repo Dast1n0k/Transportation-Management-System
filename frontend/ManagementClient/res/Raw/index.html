@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Courier Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Ensure Leaflet zoom controls are visible and properly styled */
+        .leaflet-control-zoom {
+            position: absolute !important;
+            top: 10px !important;
+            left: 10px !important;
+            z-index: 1000 !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+        }
+
+            .leaflet-control-zoom a {
+                background-color: #fff !important;
+                color: #333 !important;
+                border: 2px solid rgba(0,0,0,0.2) !important;
+                width: 30px !important;
+                height: 30px !important;
+                line-height: 26px !important;
+                font-size: 18px !important;
+                font-weight: bold !important;
+                text-decoration: none !important;
+                display: block !important;
+                text-align: center !important;
+            }
+
+                .leaflet-control-zoom a:hover {
+                    background-color: #f4f4f4 !important;
+                    color: #000 !important;
+                }
+
+        /* Custom marker styles */
+        .courier-marker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            border: 3px solid white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
+        }
+
+            .courier-marker:hover {
+                transform: scale(1.1);
+            }
+
+            .courier-marker.available {
+                background: linear-gradient(135deg, #4CAF50, #45a049);
+                animation: pulse-available 2s ease-in-out infinite;
+            }
+
+            .courier-marker.unavailable {
+                background: linear-gradient(135deg, #f44336, #d32f2f);
+                opacity: 0.8;
+            }
+
+        /* Status circle styles */
+        .status-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 999;
+            opacity: 0.5;
+        }
+
+            .status-circle.available {
+                background: linear-gradient(135deg, #4CAF50, #45a049);
+                animation: pulse-available 2s ease-in-out infinite;
+            }
+
+            .status-circle.unavailable {
+                background: linear-gradient(135deg, #f44336, #d32f2f);
+            }
+
+        /* ULTRA SIMPLE waypoint - exactly like courier markers */
+        .search-waypoint {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            background: #3388ff;
+            border: 3px solid white;
+            box-shadow: 0 2px 10px rgba(51, 136, 255, 0.4);
+            animation: pulse-search 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-search {
+            0% {
+                box-shadow: 0 2px 10px rgba(51, 136, 255, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 4px 20px rgba(51, 136, 255, 0.8);
+            }
+
+            100% {
+                box-shadow: 0 2px 10px rgba(51, 136, 255, 0.4);
+            }
+        }
+
+        @keyframes pulse-available {
+            0% {
+                box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 2px 20px rgba(76, 175, 80, 0.7);
+            }
+
+            100% {
+                box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map with zoom controls explicitly enabled
+        var northAmericaBounds = L.latLngBounds(
+            L.latLng(15, -170),
+            L.latLng(75, -50)
+        );
+
+        var map = L.map('map', {
+            maxBounds: northAmericaBounds.pad(0.1),
+            maxBoundsViscosity: 1.0,
+            minZoom: 5,
+            maxZoom: 18,
+            zoomControl: false
+        }).setView([39.8283, -98.5795], 4);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18,
+            bounds: northAmericaBounds
+        }).addTo(map);
+
+        // Global variables for markers management
+        var courierMarkers = L.layerGroup().addTo(map);
+        var searchRadiusCircle = null;
+        var searchCenterMarker = null;
+        var lastMarkerCount = 0;
+        var isFirstLoad = true;
+        var redrawCounter = 0;
+
+        // Force redraw of markers after zoom to prevent drift
+        map.on('zoomend', function () {
+            courierMarkers.eachLayer(function (layer) {
+                map.removeLayer(layer);
+                map.addLayer(layer);
+            });
+            if (searchCenterMarker) {
+                map.removeLayer(searchCenterMarker);
+                map.addLayer(searchCenterMarker);
+            }
+        });
+
+        // Vehicle type icons mapping
+        var vehicleIcons = {
+            'sprinter': '🚐',
+            'small_straight': '🚚',
+            'large_straight': '🚛',
+            'straight_small': '🚚',
+            'straight_large': '🚛',
+            'default': '📦'
+        };
+
+        function getVehicleIcon(vehicleType) {
+            return vehicleIcons[vehicleType?.toLowerCase()] || vehicleIcons['default'];
+        }
+
+        function createCourierIcon(vehicleType, isAvailable) {
+            var icon = getVehicleIcon(vehicleType);
+            var statusClass = isAvailable ? 'available' : 'unavailable';
+
+            // Create HTML with a status circle behind the vehicle icon
+            var htmlContent = `
+                    <div class="status-circle ${statusClass}"></div>
+                    <div class="courier-marker ${statusClass}">${icon}</div>
+                `;
+
+            return L.divIcon({
+                className: '', // Clear className to avoid Leaflet adding extra styles
+                html: htmlContent,
+                iconSize: [48, 48], // Match the larger status circle size
+                iconAnchor: [24, 24], // Center anchor (half of iconSize)
+                popupAnchor: [0, -24] // Adjust popup to align with larger icon
+            });
+        }
+
+        function createPopupContent(courier) {
+            return `
+                        <div style="text-align: center; font-family: Arial, sans-serif; max-width: 250px;">
+                            <strong style="color: #2c3e50; font-size: 16px;">${courier.Name} ${courier.Surname}</strong><br>
+                            <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                                <strong>Vehicle:</strong> ${courier.VehicleType || 'Not specified'}<br>
+                                <strong>Status:</strong> <span style="color: ${courier.IsAvailable ? '#4CAF50' : '#f44336'}; font-weight: bold;">
+                                    ${courier.IsAvailable ? 'Available' : 'Unavailable'}
+                                </span>
+                            </div>
+                            <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                                <strong>📍 Location:</strong> ${courier.Location || 'Not specified'}<br>
+                                <strong>📮 Zipcode:</strong> ${courier.Zipcode || 'Not provided'}<br>
+                                <strong>📞 Phone:</strong> ${courier.Phone || 'Not provided'}
+                            </div>
+                            <div style="margin: 8px 0; padding: 4px; background-color: #f8f9fa; border-radius: 4px;">
+                                <strong>📦 Capacity:</strong> ${courier.Capacity || 'Not specified'}<br>
+                                <strong>📏 Dimensions:</strong> ${courier.Dimensions || 'Not specified'}
+                            </div>
+                            ${courier.Notes ? `<div style="margin: 8px 0; padding: 4px; background-color: #fff3cd; border-radius: 4px; border-left: 3px solid #ffc107;">
+                                <strong>📝 Notes:</strong> ${courier.Notes}
+                            </div>` : ''}
+                            <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">
+                                <strong>Coordinates:</strong><br>
+                                Lat: ${courier.Latitude?.toFixed(6) || 'N/A'}<br>
+                                Lng: ${courier.Longitude?.toFixed(6) || 'N/A'}
+                            </div>
+                        </div>
+                    `;
+        }
+
+        // Function to update courier markers (called from C#)
+        window.updateCourierMarkers = function (couriers) {
+            try {
+                redrawCounter++;
+                console.log(`=== LITERAL REDRAW #${redrawCounter} - updateCourierMarkers called ===`);
+                console.log('Received couriers data:', couriers);
+
+                // Clear existing markers
+                var existingCount = courierMarkers.getLayers().length;
+                courierMarkers.clearLayers();
+                console.log(`Cleared ${existingCount} existing markers`);
+
+                var markersAdded = 0;
+
+                // Add new markers for each courier
+                if (couriers && Array.isArray(couriers)) {
+                    couriers.forEach(function (courier, index) {
+                        console.log(`Processing courier ${index + 1}:`, {
+                            name: courier.Name,
+                            surname: courier.Surname,
+                            lat: courier.Latitude,
+                            lng: courier.Longitude,
+                            vehicleType: courier.VehicleType,
+                            isAvailable: courier.IsAvailable
+                        });
+
+                        if (courier.Latitude && courier.Longitude &&
+                            courier.Latitude !== 0 && courier.Longitude !== 0) {
+
+                            var isAvailable = courier.IsAvailable === true;
+                            var icon = createCourierIcon(courier.VehicleType, isAvailable);
+
+                            var marker = L.marker([courier.Latitude, courier.Longitude], {
+                                icon: icon,
+                                title: `${courier.Name} - ${courier.VehicleType} (${isAvailable ? 'Available' : 'Unavailable'})`
+                            });
+
+                            marker.bindPopup(createPopupContent(courier));
+                            courierMarkers.addLayer(marker);
+                            markersAdded++;
+
+                            console.log(`✓ Added marker for ${courier.Name} at [${courier.Latitude}, ${courier.Longitude}]`);
+                        } else {
+                            console.log(`✗ Skipped ${courier.Name} - invalid coordinates`);
+                        }
+                    });
+                }
+
+                console.log(`=== REDRAW #${redrawCounter} COMPLETE: Added ${markersAdded}/${couriers?.length || 0} markers ===`);
+
+            } catch (error) {
+                console.error('Error updating courier markers:', error);
+            }
+        };
+
+        // Function to add search radius circle (called from C#)
+        window.addSearchRadius = function (lat, lng, radiusInMiles, zipcode) {
+            try {
+                console.log(`addSearchRadius called with: lat=${lat}, lng=${lng}, radius=${radiusInMiles}, zipcode=${zipcode}`);
+
+                // Remove existing circle and center marker
+                if (searchRadiusCircle) {
+                    map.removeLayer(searchRadiusCircle);
+                    searchRadiusCircle = null;
+                    console.log('Removed existing search circle');
+                }
+                if (searchCenterMarker) {
+                    map.removeLayer(searchCenterMarker);
+                    searchCenterMarker = null;
+                    console.log('Removed existing search marker');
+                }
+
+                // Validate inputs
+                if (!lat || !lng || !radiusInMiles || lat == 0 || lng == 0) {
+                    console.error('Invalid parameters for addSearchRadius:', { lat, lng, radiusInMiles, zipcode });
+                    return 'ERROR: Invalid parameters';
+                }
+
+                // Convert to numbers and validate
+                var latNum = parseFloat(lat);
+                var lngNum = parseFloat(lng);
+                var radiusNum = parseFloat(radiusInMiles);
+
+                if (isNaN(latNum) || isNaN(lngNum) || isNaN(radiusNum)) {
+                    console.error('Invalid numeric parameters:', { latNum, lngNum, radiusNum });
+                    return 'ERROR: Invalid numeric parameters';
+                }
+
+                // Convert miles to meters (1 mile = 1609.34 meters)
+                var radiusInMeters = radiusNum * 1609.34;
+
+                console.log(`Creating circle at [${latNum}, ${lngNum}] with radius: ${radiusInMeters} meters (${radiusNum} miles)`);
+
+                // Create circle with blue color
+                searchRadiusCircle = L.circle([latNum, lngNum], {
+                    color: '#3388ff',
+                    fillColor: '#3388ff',
+                    fillOpacity: 0.1,
+                    weight: 2,
+                    radius: radiusInMeters
+                }).addTo(map);
+
+                console.log('Circle created successfully');
+
+                // Create waypoint marker with centered anchor
+                searchCenterMarker = L.marker([latNum, lngNum], {
+                    icon: L.divIcon({
+                        className: 'search-waypoint',
+                        html: '🎯',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 17.5], // Center anchor precisely
+                        popupAnchor: [0, -17.5]
+                    }),
+                    zIndexOffset: 1000
+                }).addTo(map);
+
+                console.log('Waypoint marker created successfully');
+
+                searchCenterMarker.bindPopup(`
+                            <div style="text-align: center; font-family: Arial, sans-serif;">
+                                <strong style="color: #3388ff; font-size: 16px;">🎯 Search Waypoint</strong><br>
+                                <strong>Location:</strong> ${zipcode}<br>
+                                <strong>Coordinates:</strong><br>
+                                <span style="font-family: monospace;">Lat: ${latNum.toFixed(6)}</span><br>
+                                <span style="font-family: monospace;">Lng: ${lngNum.toFixed(6)}</span><br>
+                                <strong>Search Radius:</strong> ${radiusNum} miles
+                            </div>
+                        `);
+
+                // Fit map to circle bounds with padding
+                map.fitBounds(searchRadiusCircle.getBounds(), { padding: [20, 20] });
+
+                console.log(`Successfully added search radius for ${zipcode}: ${radiusNum} miles`);
+                return 'SUCCESS';
+            } catch (error) {
+                console.error('Error adding search radius:', error);
+                return 'ERROR: ' + error.message;
+            }
+        };
+
+        // Function to add search waypoint (called from C#)
+        window.addSearchWaypoint = function (lat, lng, zipcode) {
+            try {
+                console.log(`addSearchWaypoint called with: lat=${lat}, lng=${lng}, zipcode=${zipcode}`);
+
+                // Remove existing center marker
+                if (searchCenterMarker) {
+                    map.removeLayer(searchCenterMarker);
+                    searchCenterMarker = null;
+                }
+
+                // Validate inputs
+                if (!lat || !lng || lat == 0 || lng == 0) {
+                    console.error('Invalid coordinates for addSearchWaypoint:', { lat, lng, zipcode });
+                    return 'ERROR: Invalid coordinates';
+                }
+
+                var latNum = parseFloat(lat);
+                var lngNum = parseFloat(lng);
+
+                // Create waypoint marker with centered anchor
+                searchCenterMarker = L.marker([latNum, lngNum], {
+                    icon: L.divIcon({
+                        className: 'search-waypoint',
+                        html: '🎯',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 17.5], // Center anchor precisely
+                        popupAnchor: [0, -17.5]
+                    }),
+                    zIndexOffset: 1000
+                }).addTo(map);
+
+                searchCenterMarker.bindPopup(`
+                            <div style="text-align: center; font-family: Arial, sans-serif;">
+                                <strong style="color: #3388ff; font-size: 16px;">🎯 Navigation Waypoint</strong><br>
+                                <strong>Location:</strong> ${zipcode}<br>
+                                <strong>Coordinates:</strong><br>
+                                <span style="font-family: monospace;">Lat: ${latNum.toFixed(6)}</span><br>
+                                <span style="font-family: monospace;">Lng: ${lngNum.toFixed(6)}</span>
+                            </div>
+                        `);
+
+                // Center map on the waypoint
+                map.setView([latNum, lngNum], 12);
+
+                console.log(`Successfully added search waypoint for ${zipcode}`);
+                return 'SUCCESS';
+            } catch (error) {
+                console.error('Error adding search waypoint:', error);
+                return 'ERROR: ' + error.message;
+            }
+        };
+
+        // Function to clear search radius (called from C#)
+        window.clearSearchRadius = function () {
+            try {
+                if (searchRadiusCircle) {
+                    map.removeLayer(searchRadiusCircle);
+                    searchRadiusCircle = null;
+                }
+
+                if (searchCenterMarker) {
+                    map.removeLayer(searchCenterMarker);
+                    searchCenterMarker = null;
+                }
+
+                // Fit back to North America bounds
+                map.fitBounds(northAmericaBounds);
+
+                console.log('Cleared search radius and center marker');
+                return 'SUCCESS';
+            } catch (error) {
+                console.error('Error clearing search radius:', error);
+                return 'ERROR: ' + error.message;
+            }
+        };
+
+        console.log('Courier map initialized successfully');
+    </script>
+</body>
+</html>

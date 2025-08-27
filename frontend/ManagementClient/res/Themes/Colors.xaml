@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!-- <?xaml-comp compile="true" ?> -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Primary Colors -->
+    <Color x:Key="Primary">#1E90FF</Color> <!-- Bright blue for primary actions -->
+    <Color x:Key="Secondary">#4B5EAA</Color> <!-- Muted blue for secondary actions -->
+    <Color x:Key="Accent">#00CED1</Color> <!-- Cyan for accents -->
+    <Color x:Key="Success">#2ECC71</Color> <!-- Green for success states -->
+    <Color x:Key="Danger">#FF4040</Color> <!-- Red for errors/danger -->
+    <Color x:Key="Warning">#FFCA28</Color> <!-- Yellow for warnings -->
+    <Color x:Key="Light">#E0E0E0</Color> <!-- Light gray for light elements -->
+    <Color x:Key="Dark">#1C2526</Color> <!-- Dark gray for dark backgrounds -->
+
+    <!-- Background Colors -->
+    <Color x:Key="PageBackgroundColor">#121212</Color> <!-- Dark background for pages -->
+    <Color x:Key="SurfaceBackgroundColor">#1E1E1E</Color> <!-- Slightly lighter for surfaces -->
+    <Color x:Key="CardBackgroundColor">#252525</Color> <!-- Card background -->
+    <Color x:Key="InputBackgroundColor">#2C2C2C</Color> <!-- Input fields -->
+    <Color x:Key="OverlayBackgroundColor">#80000000</Color> <!-- Semi-transparent overlay -->
+
+    <!-- Text Colors -->
+    <Color x:Key="PrimaryTextColor">#E0E0E0</Color> <!-- Light gray for primary text -->
+    <Color x:Key="SecondaryTextColor">#B0B0B0</Color> <!-- Muted gray for secondary text -->
+    <Color x:Key="TertiaryTextColor">#808080</Color> <!-- Dim gray for tertiary text -->
+    <Color x:Key="LightTextColor">#FFFFFF</Color> <!-- White for high-contrast text -->
+    <Color x:Key="ErrorColor">#FF4040</Color> <!-- Red for errors -->
+
+    <!-- Border Colors -->
+    <Color x:Key="BorderColor">#404040</Color> <!-- Dark gray for borders -->
+    <Color x:Key="DividerColor">#505050</Color> <!-- Slightly lighter for dividers -->
+
+</ResourceDictionary>

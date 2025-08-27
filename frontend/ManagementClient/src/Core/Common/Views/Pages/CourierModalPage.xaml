@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="ManagementClient.Core.Common.Views.Bridges.CourierModalPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             Title="{Binding Title}"
+             Style="{StaticResource BasePageStyle}">
+
+    <Grid RowDefinitions="*,Auto">
+        <!-- Overlay Background -->
+        <BoxView Grid.RowSpan="2" Color="{DynamicResource OverlayBackgroundColor}"/>
+
+        <!-- Modal Content -->
+        <ScrollView Grid.Row="0" VerticalOptions="FillAndExpand">
+            <Border Style="{StaticResource ModalBorderStyle}"
+                    MaximumWidthRequest="800"
+                    MinimumWidthRequest="600"
+                    HorizontalOptions="Center"
+                    VerticalOptions="FillAndExpand"
+                    Margin="40,20">
+
+                <StackLayout Spacing="24" Padding="32">
+
+                    <!-- Header -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0"
+                               Text="{Binding Title}"
+                               Style="{StaticResource SectionTitleLabelStyle}"/>
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource IconButtonStyle}"/>
+                    </Grid>
+
+                    <!-- Form Content -->
+                    <StackLayout Spacing="20">
+
+                        <!-- Personal Information Section -->
+                        <Label Text="Personal Information"
+                               Style="{StaticResource SubtitleLabelStyle}"
+                               Margin="0,0,0,8"/>
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="16"
+                              RowDefinitions="Auto,Auto,Auto"
+                              RowSpacing="16">
+
+                            <!-- Name Field -->
+                            <StackLayout Grid.Column="0" Grid.Row="0" Spacing="4">
+                                <Label Text="Name" Style="{StaticResource BodyLabelStyle}"/>
+                                <Entry Text="{Binding Name}"
+                                       Style="{StaticResource RoundedEntryStyle}"/>
+                            </StackLayout>
+
+                            <!-- Surname Field -->
+                            <StackLayout Grid.Column="1" Grid.Row="0" Spacing="4">
+                                <Label Text="Surname" Style="{StaticResource BodyLabelStyle}"/>
+                                <Entry Text="{Binding Surname}"
+                                       Style="{StaticResource RoundedEntryStyle}" />
+                            </StackLayout>
+
+                            <!-- Phone Field -->
+                            <StackLayout Grid.Column="0" Grid.Row="1" Spacing="4">
+                                <Label Text="Phone" Style="{StaticResource BodyLabelStyle}"/>
+                                <Entry Text="{Binding Phone}"
+                                       Keyboard="Telephone"
+                                       Style="{StaticResource RoundedEntryStyle}"/>
+                            </StackLayout>
+
+                            <!-- Zipcode Field -->
+                            <StackLayout Grid.Column="1" Grid.Row="1" Spacing="4">
+                                <Label Text="Zipcode" Style="{StaticResource BodyLabelStyle}"/>
+                                <Entry Text="{Binding Zipcode}"
+                                       Style="{StaticResource RoundedEntryStyle}"/>
+                            </StackLayout>
+
+                            <!-- Status Field -->
+                            <StackLayout Grid.Column="0" Grid.Row="2" Spacing="4">
+                                <Label Text="Status" Style="{StaticResource BodyLabelStyle}"/>
+                                <Picker ItemsSource="{Binding StatusOptions}"
+                                        SelectedItem="{Binding SelectedStatus}"
+                                        Style="{StaticResource BasePicker}"/>
+                            </StackLayout>
+
+                        </Grid>
+
+                        <!-- Vehicle Information Section -->
+                        <Label Text="Vehicle Information"
+                               Style="{StaticResource SubtitleLabelStyle}"
+                               Margin="0,16,0,8"/>
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="16"
+                              RowDefinitions="Auto,Auto"
+                              RowSpacing="16">
+
+                            <!-- Type Field -->
+                            <StackLayout Grid.Column="0" Grid.Row="0" Spacing="4">
+                                <Label Text="Type" Style="{StaticResource BodyLabelStyle}"/>
+                                <Picker ItemsSource="{Binding VehicleTypes}"
+                                        SelectedItem="{Binding SelectedVehicleType}"
+                                        SelectedIndex="0"
+                                        Style="{StaticResource BasePicker}"/>
+                            </StackLayout>
+
+                            <!-- Capacity Field -->
+                            <StackLayout Grid.Column="1" Grid.Row="0" Spacing="4">
+                                <Label Text="Capacity" Style="{StaticResource BodyLabelStyle}"/>
+                                <Entry Text="{Binding Capacity}"
+                                       Keyboard="Numeric"
+                                       Style="{StaticResource RoundedEntryStyle}"/>
+                            </StackLayout>
+
+                            <!-- Dimensions Field -->
+                            <StackLayout Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Spacing="4">
+                                <Label Text="Dimensions" Style="{StaticResource BodyLabelStyle}"/>
+                                <Entry Text="{Binding Dimensions}"
+                                       Style="{StaticResource RoundedEntryStyle}"/>
+                            </StackLayout>
+
+                        </Grid>
+
+                        <!-- Notes Section -->
+                        <Label Text="Additional Information"
+                               Style="{StaticResource SubtitleLabelStyle}"
+                               Margin="0,16,0,8"/>
+
+                        <StackLayout Spacing="4">
+                            <Label Text="Notes" Style="{StaticResource BodyLabelStyle}"/>
+                            <Editor Text="{Binding Notes}"
+                                    HeightRequest="120"
+                                    Style="{StaticResource RoundedEditorStyle}"
+                                    AutoSize="TextChanges"/>
+                        </StackLayout>
+
+                    </StackLayout>
+
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="16" Margin="0,24,0,0">
+                        <Button Grid.Column="0"
+                                Text="Cancel"
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}"/>
+                        <Button Grid.Column="1"
+                                Text="Save"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}"/>
+                    </Grid>
+
+                    <!-- Loading Indicator -->
+                    <ActivityIndicator IsVisible="{Binding IsBusy}"
+                                       IsRunning="{Binding IsBusy}"
+                                       Style="{StaticResource LoadingIndicatorStyle}"/>
+
+                </StackLayout>
+            </Border>
+        </ScrollView>
+    </Grid>
+</ContentPage>

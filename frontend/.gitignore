@@ -1,0 +1,6 @@
+# dirs
+.vs/
+out/
+
+# files
+.env

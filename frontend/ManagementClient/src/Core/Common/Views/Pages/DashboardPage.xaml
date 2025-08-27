@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="ManagementClient.Core.Common.Views.Bridges.DashboardPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:ManagementClient.Core.Common.ViewModels"
+             x:Name="DashboardPageRoot"
+             Title="{Binding Title}"
+             Style="{StaticResource BasePageStyle}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,Auto"
+              Padding="20,10"
+              BackgroundColor="{DynamicResource SurfaceBackgroundColor}">
+
+            <Label Grid.Column="0"
+                   Text="Logistics Dashboard"
+                   Style="{StaticResource SectionTitleLabelStyle}"
+                   VerticalOptions="Center"/>
+
+            <Button Grid.Column="1"
+                    Text="Logout"
+                    Command="{Binding LogoutCommand}"
+                    Style="{StaticResource SecondaryButtonStyle}"/>
+        </Grid>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="420,*">
+
+            <!-- Sidebar with right border -->
+            <Grid Grid.Column="0" BackgroundColor="{DynamicResource SurfaceBackgroundColor}">
+
+                <ScrollView Padding="20">
+                    <StackLayout Spacing="8">
+
+                        <!-- Search Section -->
+                        <StackLayout Spacing="8">
+                            <Label Text="Search Deliveries"
+                                   Style="{StaticResource SubtitleLabelStyle}"/>
+
+                            <Label Text="Zip Code"
+                                   Style="{StaticResource BodyLabelStyle}"/>
+                            <Entry Placeholder="Enter zip code"
+                                   Text="{Binding ZipCode}"
+                                   Style="{StaticResource RoundedEntryStyle}"
+                                   Completed="OnZipCodeEntryCompleted"
+                                   ReturnType="Search"/>
+
+                            <Label Text="Radius (miles)"
+                                   Style="{StaticResource BodyLabelStyle}"/>
+                            <Picker ItemsSource="{Binding RadiusOptions}"
+                                    SelectedItem="{Binding RadiusInMiles}"
+                                    Style="{StaticResource BasePicker}"/>
+
+                            <Button Text="🔍 Search Couriers"
+                                    Command="{Binding SearchZipcodeCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"/>
+
+                            <!-- Stop Search Button -->
+                            <Button Text="🛑 Stop Search"
+                                    Command="{Binding StopSearchCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    IsVisible="{Binding HasPerformedSearch}"/>
+                        </StackLayout>
+
+                        <!-- Search Results -->
+                        <StackLayout Spacing="12" 
+                                     IsVisible="{Binding HasPerformedSearch}">
+                            <Label Text="Available Couriers"
+                                   Style="{StaticResource SubtitleLabelStyle}"/>
+
+                            <CollectionView ItemsSource="{Binding FilteredDeliveryPersons}"
+                                            Style="{StaticResource BaseCollectionViewStyle}">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:CourierViewModel">
+                                        <Border Style="{StaticResource CardBorderStyle}"
+                                                Margin="0,8"
+                                                Padding="0">
+                                            <Grid Padding="16"
+                                                  ColumnDefinitions="Auto,*,Auto"
+                                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                                  RowSpacing="2">
+
+                                                <!-- Vehicle Icon -->
+                                                <Border Grid.Column="0" Grid.RowSpan="8"
+                                                        BackgroundColor="{DynamicResource InputBackgroundColor}"
+                                                        Stroke="{DynamicResource BorderColor}"
+                                                        StrokeThickness="1"
+                                                        WidthRequest="55"
+                                                        HeightRequest="55"
+                                                        VerticalOptions="Start"
+                                                        Margin="0,0,14,0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Label Text="{Binding VehicleIcon}"
+                                                           FontSize="32"
+                                                           TextColor="{DynamicResource PrimaryTextColor}"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"/>
+                                                </Border>
+
+                                                <!-- Row 1: Full Name and Status Badge -->
+                                                <Grid Grid.Column="1" Grid.Row="0" 
+                                                      ColumnDefinitions="*,Auto"
+                                                      Margin="0,0,0,4">
+                                                    <StackLayout Grid.Column="0" 
+                                                                 Orientation="Horizontal" 
+                                                                 Spacing="4"
+                                                                 VerticalOptions="Center">
+                                                        <Label Text="{Binding Name}"
+                                                               Style="{StaticResource BodyLabelStyle}"
+                                                               FontAttributes="Bold"/>
+                                                        <Label Text="{Binding Surname}"
+                                                               Style="{StaticResource BodyLabelStyle}"
+                                                               FontAttributes="Bold"/>
+                                                    </StackLayout>
+
+                                                    <Border Grid.Column="1"
+                                                            BackgroundColor="{DynamicResource Primary}"
+                                                            Style="{StaticResource StatusBadgeStyle}">
+                                                        <Label Text="{Binding StatusText}"
+                                                               TextColor="{DynamicResource LightTextColor}"
+                                                               FontSize="10"
+                                                               FontAttributes="Bold"
+                                                               HorizontalOptions="Center"/>
+                                                    </Border>
+                                                </Grid>
+
+                                                <!-- Row 2: Location -->
+                                                <Label Grid.Column="1" Grid.Row="1"
+                                                       Text="{Binding Location}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontAttributes="Bold"/>
+
+                                                <!-- Row 3: Phone -->
+                                                <Label Grid.Column="1" Grid.Row="2"
+                                                       Text="{Binding Phone, StringFormat='Phone: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"/>
+
+                                                <!-- Row 4: Zipcode -->
+                                                <Label Grid.Column="1" Grid.Row="3"
+                                                       Text="{Binding Zipcode, StringFormat='Zip: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"/>
+
+                                                <!-- Row 5: Distance -->
+                                                <Label Grid.Column="1" Grid.Row="4"
+                                                       Text="{Binding DistanceFromSearch, StringFormat='Distance: {0:F1} miles'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"
+                                                       FontAttributes="Bold"/>
+
+                                                <!-- Row 6: Capacity -->
+                                                <Label Grid.Column="1" Grid.Row="5"
+                                                       Text="{Binding Capacity, StringFormat='Capacity: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"/>
+
+                                                <!-- Row 7: Dimensions -->
+                                                <Label Grid.Column="1" Grid.Row="6"
+                                                       Text="{Binding Dimensions, StringFormat='Dimensions: {0}'}"
+                                                       Style="{StaticResource CaptionLabelStyle}"/>
+
+                                                <!-- Row 8: Notes -->
+                                                <Border Grid.Column="1" Grid.Row="7"
+                                                        BackgroundColor="{DynamicResource Warning}"
+                                                        Stroke="{DynamicResource BorderColor}"
+                                                        StrokeThickness="1"
+                                                        Style="{StaticResource StatusBadgeStyle}">
+                                                    <Label Text="{Binding Notes, StringFormat='Note: {0}'}"
+                                                           Style="{StaticResource CaptionLabelStyle}"
+                                                           TextColor="{DynamicResource Dark}"
+                                                           FontAttributes="Italic"
+                                                           LineBreakMode="WordWrap"/>
+                                                </Border>
+
+                                                <!-- Copy Button -->
+                                                <Border Grid.Column="2" Grid.Row="0" Grid.RowSpan="8"
+                                                        BackgroundColor="{DynamicResource Primary}"
+                                                        Stroke="{DynamicResource BorderColor}"
+                                                        StrokeThickness="1"
+                                                        WidthRequest="45"
+                                                        HeightRequest="45"
+                                                        VerticalOptions="Start"
+                                                        Margin="8,0,0,0">
+                                                    <Border.StrokeShape>
+                                                        <RoundRectangle CornerRadius="8"/>
+                                                    </Border.StrokeShape>
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding BindingContext.CopyCourierDataCommand, Source={x:Reference Name=DashboardPageRoot}}"
+                                                                              CommandParameter="{Binding .}"/>
+                                                    </Border.GestureRecognizers>
+                                                    <Label Text="📋"
+                                                           FontSize="18"
+                                                           TextColor="{DynamicResource LightTextColor}"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"/>
+                                                </Border>
+
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </StackLayout>
+
+                    </StackLayout>
+                </ScrollView>
+
+                <!-- Right border -->
+                <BoxView BackgroundColor="{DynamicResource BorderColor}"
+                         WidthRequest="1"
+                         HorizontalOptions="End"
+                         VerticalOptions="FillAndExpand"/>
+            </Grid>
+
+            <!-- Main Content Area -->
+            <Grid Grid.Column="1">
+
+                <!-- Tab Header -->
+                <Grid RowDefinitions="Auto,*">
+
+                    <!-- View Toggle with bottom border -->
+                    <Grid Grid.Row="0"
+                          BackgroundColor="{DynamicResource SurfaceBackgroundColor}"
+                          Padding="20,10">
+
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+
+                            <!-- View Toggle Buttons -->
+                            <Button Grid.Column="0"
+                                    Text="Map View"
+                                    Command="{Binding SwitchToMapViewCommand}"
+                                    Style="{StaticResource ActiveToggleButtonStyle}"/>
+
+                            <Button Grid.Column="1"
+                                    Text="Delivery Guys"
+                                    Command="{Binding SwitchToListViewCommand}"
+                                    Style="{StaticResource InactiveToggleButtonStyle}"
+                                    Margin="8,0,0,0"/>
+
+                            <!-- Add New Button -->
+                            <Button Grid.Column="3"
+                                    Text="+ Add New"
+                                    Command="{Binding AddNewDeliveryPersonCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"/>
+                        </Grid>
+
+                        <!-- Bottom border -->
+                        <BoxView BackgroundColor="{DynamicResource BorderColor}"
+                                 HeightRequest="1"
+                                 VerticalOptions="End"
+                                 HorizontalOptions="FillAndExpand"/>
+                    </Grid>
+
+                    <!-- Content Area -->
+                    <Grid Grid.Row="1">
+
+                        <!-- Map View -->
+                        <Grid IsVisible="{Binding IsMapView}">
+                            <WebView x:Name="CourierMapWebView"
+                                     VerticalOptions="FillAndExpand"
+                                     HorizontalOptions="FillAndExpand"
+                                     BackgroundColor="{DynamicResource SurfaceBackgroundColor}"/>
+                        </Grid>
+
+                        <!-- List View -->
+                        <ScrollView IsVisible="{Binding IsListView}">
+                            <StackLayout Padding="20"
+                                         Spacing="20">
+
+                                <!-- Header -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0"
+                                           Text="Delivery Personnel Management"
+                                           Style="{StaticResource SectionTitleLabelStyle}"/>
+                                </Grid>
+
+                                <!-- Delivery Personnel Cards -->
+                                <CollectionView ItemsSource="{Binding FilteredDeliveryPersons}"
+                                                Style="{StaticResource BaseCollectionViewStyle}">
+                                    <CollectionView.ItemsLayout>
+                                        <GridItemsLayout Orientation="Vertical"
+                                                         Span="3"/>
+                                    </CollectionView.ItemsLayout>
+
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate x:DataType="viewModels:CourierViewModel">
+                                            <Border Style="{StaticResource CardBorderStyle}">
+                                                <StackLayout Spacing="12">
+
+                                                    <!-- Header with Name and Status -->
+                                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                                        <Label Grid.Column="0"
+                                                               Text="{Binding Name}"
+                                                               Style="{StaticResource SubtitleLabelStyle}"
+                                                               FontAttributes="Bold"/>
+
+                                                        <Border Grid.Column="1"
+                                                                Style="{StaticResource StatusBadgeStyle}"
+                                                                BackgroundColor="{DynamicResource Primary}">
+                                                            <Label Text="{Binding StatusText}"
+                                                                   TextColor="{DynamicResource LightTextColor}"
+                                                                   FontSize="10"
+                                                                   FontAttributes="Bold"
+                                                                   HorizontalOptions="Center"/>
+                                                        </Border>
+
+                                                        <Label Grid.Column="2"
+                                                               Text="{Binding VehicleIcon}"
+                                                               FontSize="20"
+                                                               TextColor="{DynamicResource PrimaryTextColor}"
+                                                               VerticalOptions="Center"
+                                                               Margin="8,0,0,0"/>
+                                                    </Grid>
+
+                                                    <!-- Contact Info -->
+                                                    <StackLayout Spacing="4">
+                                                        <Label Text="{Binding Phone}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding Location}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding Zipcode, StringFormat='Zip: {0}'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding DistanceFromSearch, StringFormat='Distance: {0:F1} miles'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding Capacity, StringFormat='Capacity: {0}'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                        <Label Text="{Binding Dimensions, StringFormat='Dimensions: {0}'}"
+                                                               Style="{StaticResource CaptionLabelStyle}"/>
+                                                    </StackLayout>
+
+                                                    <!-- Action Buttons -->
+                                                    <Grid ColumnDefinitions="*,*"
+                                                          ColumnSpacing="8"
+                                                          Margin="0,8,0,0">
+                                                        <Button Grid.Column="0"
+                                                                Text="Edit"
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditDeliveryPersonCommand}"
+                                                                CommandParameter="{Binding Courier}"
+                                                                Style="{StaticResource SecondaryButtonStyle}"/>
+
+                                                        <Button Grid.Column="1"
+                                                                Text="Delete"
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteDeliveryPersonCommand}"
+                                                                CommandParameter="{Binding Courier}"
+                                                                Style="{StaticResource DangerButtonStyle}"/>
+                                                    </Grid>
+
+                                                </StackLayout>
+                                            </Border>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+
+                                <!-- Loading Indicator -->
+                                <ActivityIndicator IsVisible="{Binding IsBusy}"
+                                                   IsRunning="{Binding IsBusy}"
+                                                   Style="{StaticResource LoadingIndicatorStyle}"
+                                                   Margin="0,40"/>
+
+                            </StackLayout>
+                        </ScrollView>
+
+                    </Grid>
+
+                </Grid>
+
+            </Grid>
+
+        </Grid>
+
+    </Grid>
+
+</ContentPage>

@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="ManagementClient.Core.Common.Views.Bridges.DeliveryGuysPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:ManagementClient.Core.Common.Models"
+             Title="{Binding Title}"
+             Style="{StaticResource BasePageStyle}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,Auto,Auto"
+              Padding="20,10"
+              BackgroundColor="{DynamicResource SurfaceBackgroundColor}">
+
+            <Label Grid.Column="0"
+                   Text="Delivery Guys Management"
+                   Style="{StaticResource SectionTitleLabelStyle}"
+                   VerticalOptions="Center"/>
+
+            <Button Grid.Column="1"
+                    Text="Add New Courier"
+                    Command="{Binding AddCourierCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Margin="0,0,10,0"/>
+
+            <Button Grid.Column="2"
+                    Text="Back"
+                    Command="{Binding BackCommand}"
+                    Style="{StaticResource SecondaryButtonStyle}"/>
+        </Grid>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsVisible="{Binding IsBusy}"
+                               IsRunning="{Binding IsBusy}"
+                               Style="{StaticResource LoadingIndicatorStyle}"
+                               ZIndex="1"/>
+
+            <!-- Courier List -->
+            <RefreshView IsRefreshing="{Binding IsRefreshing}"
+                         Command="{Binding RefreshCommand}">
+
+                <CollectionView ItemsSource="{Binding Couriers}"
+                                Style="{StaticResource BaseCollectionViewStyle}"
+                                Margin="20">
+
+                    <CollectionView.EmptyView>
+                        <StackLayout VerticalOptions="CenterAndExpand"
+                                     HorizontalOptions="CenterAndExpand"
+                                     Spacing="16">
+                            <Label Text="No couriers found"
+                                   Style="{StaticResource SubtitleLabelStyle}"
+                                   HorizontalTextAlignment="Center"/>
+                            <Label Text="Tap 'Add New Courier' to create your first courier"
+                                   Style="{StaticResource BodyLabelStyle}"
+                                   HorizontalTextAlignment="Center"/>
+                        </StackLayout>
+                    </CollectionView.EmptyView>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Courier">
+                            <Border Style="{StaticResource CardBorderStyle}"
+                                    Margin="0,0,0,20"
+                                    MinimumHeightRequest="200">
+
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditCourierCommand}"
+                                                          CommandParameter="{Binding .}"/>
+                                </Border.GestureRecognizers>
+
+                                <Grid ColumnDefinitions="*,Auto"
+                                      RowDefinitions="Auto,Auto,Auto,Auto"
+                                      Padding="24"
+                                      RowSpacing="12">
+
+                                    <!-- Name, Surname, and Status -->
+                                    <StackLayout Grid.Column="0"
+                                                 Grid.Row="0"
+                                                 Orientation="Horizontal"
+                                                 Spacing="12"
+                                                 VerticalOptions="Center">
+                                        <!-- Ensure all elements align vertically -->
+                                        <Label Text="{Binding Name}"
+                                               Style="{StaticResource SubtitleLabelStyle}"
+                                               FontAttributes="Bold"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding Surname}"
+                                               Style="{StaticResource SubtitleLabelStyle}"
+                                               FontAttributes="Bold"
+                                               VerticalOptions="Center"/>
+                                        <!-- Status Badge -->
+                                        <Border VerticalOptions="Center">
+                                            <!-- Align Border with labels -->
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="StrokeShape" Value="RoundRectangle 10"/>
+                                                    <Setter Property="Padding" Value="8,2"/>
+                                                    <!-- Compact padding -->
+                                                    <Setter Property="HeightRequest" Value="32"/>
+                                                    <!-- Reduced height -->
+                                                    <Setter Property="HorizontalOptions" Value="Start"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="True">
+                                                            <Setter Property="BackgroundColor" Value="{DynamicResource Success}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger TargetType="Border" Binding="{Binding IsAvailable}" Value="False">
+                                                            <Setter Property="BackgroundColor" Value="{DynamicResource Danger}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <Label TextColor="{DynamicResource LightTextColor}"
+                                                   FontSize="14"
+                                                   FontAttributes="Bold"
+                                                   VerticalOptions="Center">
+                                                <!-- Align Label with Border -->
+                                                <Label.Style>
+                                                    <Style TargetType="Label">
+                                                        <Setter Property="VerticalOptions" Value="Center"/>
+                                                        <Setter Property="Padding" Value="0"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="True">
+                                                                <Setter Property="Text" Value="Available"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="False">
+                                                                <Setter Property="Text" Value="Unavailable"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Label.Style>
+                                            </Label>
+                                        </Border>
+                                    </StackLayout>
+
+                                    <!-- Action Buttons -->
+                                    <StackLayout Grid.Column="1"
+                                                 Grid.Row="0"
+                                                 Orientation="Horizontal"
+                                                 Spacing="12">
+                                        <Button Text="✏️ Edit"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditCourierCommand}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource EditButtonStyle}"
+                                                WidthRequest="110"
+                                                HeightRequest="50"/>
+                                        <Button Text="🗑️ Delete"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteCourierCommand}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource DangerButtonStyle}"
+                                                WidthRequest="110"
+                                                HeightRequest="50"/>
+                                    </StackLayout>
+
+                                    <!-- All Info Horizontally -->
+                                    <ScrollView Grid.Column="0"
+                                                Grid.Row="1"
+                                                Grid.ColumnSpan="2"
+                                                Orientation="Horizontal"
+                                                HorizontalScrollBarVisibility="Never">
+                                        <StackLayout Orientation="Horizontal"
+                                                     Spacing="25">
+                                            <Label Text="{Binding Phone, StringFormat='📞 {0}'}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding Zipcode, StringFormat='📍 {0}'}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold"/>
+                                            <StackLayout Orientation="Horizontal"
+                                                         Spacing="8">
+                                                <Label Text="{Binding VehicleIcon}"
+                                                       FontSize="18"/>
+                                                <Label Text="{Binding VehicleType}"
+                                                       Style="{StaticResource BodyLabelStyle}"
+                                                       FontAttributes="Bold"/>
+                                            </StackLayout>
+                                            <Label Text="{Binding Capacity, StringFormat='📦 {0}'}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding Dimensions, StringFormat='📐 {0}'}"
+                                                   Style="{StaticResource BodyLabelStyle}"
+                                                   FontAttributes="Bold"/>
+                                        </StackLayout>
+                                    </ScrollView>
+
+                                    <!-- Notes (if any) -->
+                                    <StackLayout Grid.Column="0"
+                                                 Grid.Row="2"
+                                                 Grid.ColumnSpan="2">
+                                        <Label Text="{Binding Notes, StringFormat='💬 {0}'}"
+                                               Style="{StaticResource CaptionLabelStyle}"
+                                               FontAttributes="Italic"
+                                               MaxLines="2"
+                                               LineBreakMode="TailTruncation"/>
+                                    </StackLayout>
+
+                                    <!-- Spacer for better layout -->
+                                    <BoxView Grid.Column="0"
+                                             Grid.Row="3"
+                                             Grid.ColumnSpan="2"
+                                             HeightRequest="10"
+                                             Color="Transparent"/>
+
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </RefreshView>
+
+        </Grid>
+    </Grid>
+</ContentPage>
